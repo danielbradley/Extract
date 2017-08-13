@@ -14,8 +14,8 @@ int main( int argc, char** argv )
 {
 	return 0;
 }
-&#96;&#96;&#96;
 \`\`\`
+```
 
 while, similarly, MaxText uses tildes ('~'). 
 
