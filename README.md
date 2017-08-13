@@ -9,13 +9,13 @@ MaxText is a plain text markup system that is similar conceptually to Markdown.
 Markdown uses a triplet of back-ticks ('`') in the left-most column to indicate the start and end of a pre-formatted text section, e.g:
 
 ```
-&#96;&#96;&#96;
+\`\`\`
 int main( int argc, char** argv )
 {
 	return 0;
 }
 &#96;&#96;&#96;
-```
+\`\`\`
 
 while, similarly, MaxText uses tildes ('~'). 
 
