@@ -10,8 +10,8 @@ Markdown uses a triplet of back-ticks ("```") in the left-most column to indicat
 Techically, both text systems ignore any remaining text on the line,
 however, some systems such as github, allow remaining text to hint at a programming language.
 
-'Extract' uses these superfluous characters as a pattern that identifies the pre-formatted text block.
-The following pre-formatted text block begins with the tag "```tables`, which identifies it with the pattern "tables"
+Likewise, 'Extract' uses these superfluous characters as a pattern that identifies the pre-formatted text block.
+The following pre-formatted text block begins with the tag "```tables`, which identifies it with the pattern "tables".
 
 ```tables
 CREATE TABLE users
@@ -23,3 +23,10 @@ CREATE TABLE users
 	PRIMARY KEY (USER)
 );
 ```
+
+Calling extract and supplying the pattern "tables", any such pre-formatted text sections, in any processed files, will be output.
+
+```
+extract -p "tables" source/mt/*.txt > sql/tables.sql
+```
+
