@@ -175,6 +175,7 @@ char* generatePattern( const char* pat )
 	tmp = stpcpy( tmp, "~" );
 	return pattern;
 }
+```
 
 ```
 void tryToProcess( char* file, const char* pattern )
@@ -278,6 +279,8 @@ void processPreformatted( char* line, FILE* stream, const char* pattern )
 	}
 	while ( loop );
 }
+```
+
 ```
 char* readline( FILE* stream )
 {
