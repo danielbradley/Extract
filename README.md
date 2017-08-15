@@ -60,7 +60,7 @@ extract -p "tables" source/mt/*.txt > sql/tables.sql
 #include <string.h>
 ```
 
-```main.js```
+```main.js
 Ronald.McDonald
 =
 function( responseText )
