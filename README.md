@@ -54,7 +54,7 @@ extract -p "tables" source/mt/*.txt > sql/tables.sql
  */
 ```
 
-```main.c
+```main.c'''
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
