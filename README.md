@@ -6,26 +6,13 @@ from marked up text files that are able to represent pre-formated text sections.
 Currently, two such text formats are explicitly supported - Markdown and MaxText.
 MaxText is a plain text markup system that is similar conceptually to Markdown.
 
-Markdown uses a triplet of back-ticks ('`') in the left-most column to indicate the start and end of a pre-formatted text section, e.g:
+Markdown uses a triplet of back-ticks ("```") in the left-most column to indicate the start and end of a pre-formatted text section, while Maxtext uses a tilde ('~') character.
 
-```
-<code>```</code>
+```c
 int main( int argc, char** argv )
 {
 	return 0;
 }
-<code>```</code>
-```
-
-while, similarly, MaxText uses tildes ('~'). 
-
-```
-~
-int main( int argc, char** argv )
-{
-	return 0;
-}
-~
 ```
 
 Techically, both text systems ignore any remaining text on the line,
