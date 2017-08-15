@@ -18,7 +18,7 @@ int main( int argc, char** argv )
 Techically, both text systems ignore any remaining text on the line,
 however, some systems such as github, allow remaining text to hint at a programming language, e.g:
 
-```c`
+```c share/c
 int main( int argc, char** argv )
 {
 	return 0;
