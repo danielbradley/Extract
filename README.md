@@ -60,6 +60,20 @@ extract -p "tables" source/mt/*.txt > sql/tables.sql
 #include <string.h>
 ```
 
+```main.js```
+Ronald.McDonald
+=
+function( responseText )
+{
+	var json = JSON.parse( responseText )
+	
+	if ( "OK" == json.status )
+	{
+		location.reload()
+	}
+}
+```
+
 ```
 static int DEBUG = 0;
 ```
