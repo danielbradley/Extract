@@ -30,7 +30,7 @@ Calling extract and supplying the pattern "tables", any such pre-formatted text 
 extract -p "tables" source/mt/*.txt > sql/tables.sql
 ```
 
-```main.c'''c
+```main.c'''
 /*
  *		Extract
  *
@@ -54,7 +54,7 @@ extract -p "tables" source/mt/*.txt > sql/tables.sql
  */
 ```
 
-```
+```main.c
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
