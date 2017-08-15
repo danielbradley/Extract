@@ -30,7 +30,7 @@ Calling extract and supplying the pattern "tables", any such pre-formatted text 
 extract -p "tables" source/mt/*.txt > sql/tables.sql
 ```
 
-```C
+```main.c```
 /*
  *		Extract
  *
