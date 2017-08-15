@@ -148,6 +148,7 @@ char* argumentsGetValue( int n, char** files, char* flag )
 	}
 	return ret;
 }
+```
 
 ```
 int stringEquals( const char* one, const char* two )
