@@ -8,12 +8,12 @@ MaxText is a plain text markup system that is similar conceptually to Markdown.
 
 Markdown uses a triplet of back-ticks ("```") in the left-most column to indicate the start and end of a pre-formatted text section, while Maxtext uses a tilde ('~') character.
 Techically, both text systems ignore any remaining text on the line,
-however, some systems such as github, allow remaining text to hint at a programming language.
+however, some systems such as Github, allow remaining text to hint at a programming language.
 
 Likewise, 'Extract' uses these superfluous characters as a pattern that identifies the pre-formatted text block.
-The following pre-formatted text block begins with the tag "```tables`, which identifies it with the pattern "tables".
+The following pre-formatted text block begins with the tag "```sql.tables", which identifies it with the pattern "tables".
 
-```sql
+```sql.tables`
 CREATE TABLE users
 (
 	USER        INT  AUTO_INCREMENT,
@@ -66,7 +66,7 @@ Ronald.McDonald
 function( responseText )
 {
 	var json = JSON.parse( responseText )
-	
+
 	if ( "OK" == json.status )
 	{
 		location.reload()
@@ -156,7 +156,7 @@ char* argumentsGetValue( int n, char** files, char* flag )
 		if ( stringEquals( flag, files[i] ) )
 		{
 			i++;
-			if ( i < n) ret = strdup( files[i] ); 
+			if ( i < n) ret = strdup( files[i] );
 			i = n;
 		}
 	}
