@@ -1,0 +1,270 @@
+<h1 id="extract">Extract</h1>
+<p>'Extract' is a command line tool for extracting SQL and other code from marked up text files that are able to represent pre-formated text sections.</p>
+<p>Currently, two such text formats are explicitly supported - Markdown and MaxText. MaxText is a plain text markup system that is similar conceptually to Markdown.</p>
+<p>Markdown uses a triplet of back-ticks (&quot;```&quot;) in the left-most column to indicate the start and end of a pre-formatted text section, while Maxtext uses a tilde ('~') character. Techically, both text systems ignore any remaining text on the line, however, some systems such as Github, allow remaining text to hint at a programming language.</p>
+<p>Likewise, 'Extract' uses these superfluous characters as a pattern that identifies the pre-formatted text block. The following pre-formatted text block begins with the tag &quot;```sql.tables&quot;, which identifies it with the pattern &quot;tables&quot;.</p>
+<div class="sourceCode"><pre class="sourceCode tables.sql"><code class="sourceCode sql"><span class="kw">CREATE</span> <span class="kw">TABLE</span> users
+(
+    <span class="fu">USER</span>        <span class="dt">INT</span>  AUTO_INCREMENT,
+    given_name  TEXT <span class="kw">DEFAULT</span> <span class="st">&#39;&#39;</span>,
+    family_name TEXT <span class="kw">DEFAULT</span> <span class="st">&#39;&#39;</span>,
+
+    <span class="kw">PRIMARY</span> <span class="kw">KEY</span> (<span class="fu">USER</span>)
+);</code></pre></div>
+<p>Calling extract and supplying the pattern &quot;tables&quot;, any such pre-formatted text sections, in any processed files, will be output.</p>
+<pre><code>extract -p &quot;tables&quot; source/mt/*.txt &gt; sql/tables.sql</code></pre>
+<div class="sourceCode"><pre class="sourceCode !main.c"><code class="sourceCode c"><span class="co">/*</span>
+<span class="co"> *      Extract</span>
+<span class="co"> *</span>
+<span class="co"> *      This is a generalisatin of the extract SQL program -- its purpose</span>
+<span class="co"> *      is to extract pre-formatted segments from MaxText documentation</span>
+<span class="co"> *      source files.</span>
+<span class="co"> *</span>
+<span class="co"> *      If the first argument is &quot;-p&quot;, the second argument is treated as a</span>
+<span class="co"> *      &quot;pattern&quot; specifier. The pattern matched is &#39;~&#39; . &lt;pattern&gt; . &#39;~&#39;.</span>
+<span class="co"> *</span>
+<span class="co"> *      Further arguments to the command-line are treated as MaxText files. Each</span>
+<span class="co"> *      file is (read-only) processed in turn and output to the standard out.</span>
+<span class="co"> *</span>
+<span class="co"> *      For each file lines are output to stdout if they existing between a</span>
+<span class="co"> *      line that starts with the specified pattern and a line that starts with &quot;~&quot;.</span>
+<span class="co"> *</span>
+<span class="co"> *      Usage:</span>
+<span class="co"> *</span>
+<span class="co"> *          extract -p &quot;sql&quot; &lt;MaxText Files&gt; [ &gt; output file]</span>
+<span class="co"> *</span>
+<span class="co"> */</span></code></pre></div>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="pp">#include </span><span class="im">&lt;stdlib.h&gt;</span>
+<span class="pp">#include </span><span class="im">&lt;stdio.h&gt;</span>
+<span class="pp">#include </span><span class="im">&lt;string.h&gt;</span></code></pre></div>
+<div class="sourceCode"><pre class="sourceCode !main.js"><code class="sourceCode javascript"><span class="va">Ronald</span>.<span class="at">McDonald</span>
+<span class="op">=</span>
+<span class="kw">function</span>( responseText )
+<span class="op">{</span>
+    <span class="kw">var</span> json <span class="op">=</span> <span class="va">JSON</span>.<span class="at">parse</span>( responseText )
+
+    <span class="cf">if</span> ( <span class="st">&quot;OK&quot;</span> <span class="op">==</span> <span class="va">json</span>.<span class="at">status</span> )
+    <span class="op">{</span>
+        <span class="va">location</span>.<span class="at">reload</span>()
+    <span class="op">}</span>
+<span class="op">}</span></code></pre></div>
+<pre><code>static int DEBUG = 0;</code></pre>
+<pre><code>int    argumentsContains();
+char*  argumentsGetValue();
+int                usage();
+char*    generatePattern( const char* );
+void        tryToProcess( char*, const char* );
+void             process( FILE*, const char* );
+char*           readline( FILE* );
+void processPreformatted( char* line, FILE*, const char* pattern );</code></pre>
+<pre><code>int STRIP;</code></pre>
+<pre><code>int main( int argc, char** files )
+{
+    STRIP     = argumentsContains( argc, files, &quot;-s&quot; ) ? 1 : 0;
+    char* pat = argumentsGetValue( argc, files, &quot;-p&quot; );
+
+    int expected_arguments = 4 + STRIP; // extract -p &quot;some pattern&quot; files [-s]
+
+    if ( ! pat )
+    {
+        return usage();
+    }
+    else
+    if ( argc &lt; expected_arguments )
+    {
+        return usage();
+    }
+    else
+    {
+        char* pattern = generatePattern( pat );
+        int i;
+        for ( i=expected_arguments; i &lt; argc; i++ )
+        {
+            tryToProcess( files[i], pattern );
+        }
+
+        free( pattern );
+    }
+    free( pat );
+
+    return 0;
+}</code></pre>
+<pre><code>int argumentsContains( int n, char** files, char* flag )
+{
+    int b = 0;
+    int i;
+
+    for ( i=0; i &lt; n; i++ )
+    {
+        if ( stringEquals( flag, files[i] ) )
+        {
+            b = 1;
+            i = n;
+        }
+    }
+    return b;
+}</code></pre>
+<pre><code>char* argumentsGetValue( int n, char** files, char* flag )
+{
+    char* ret = NULL;
+    int i;
+
+    for ( i=0; i &lt; n; i++ )
+    {
+        if ( stringEquals( flag, files[i] ) )
+        {
+            i++;
+            if ( i &lt; n) ret = strdup( files[i] );
+            i = n;
+        }
+    }
+    return ret;
+}</code></pre>
+<pre><code>int stringEquals( const char* one, const char* two )
+{
+    return (0 == strcmp( one, two ));
+}</code></pre>
+<pre><code>int usage()
+{
+    fprintf( stderr, &quot;Usage:\n\textract [-s] -p &lt;pattern&gt; &lt;file&gt; [more files] [ &gt; output file ]\n&quot; );
+    return -1;
+}</code></pre>
+<pre><code>char* generatePattern( const char* pat )
+{
+    int len = strlen( pat );
+    char* pattern = calloc( len + 3, sizeof(char) );
+    char* tmp = pattern;
+    tmp = stpcpy( tmp, &quot;~&quot; );
+    tmp = stpcpy( tmp, pat );
+    tmp = stpcpy( tmp, &quot;~&quot; );
+    return pattern;
+}</code></pre>
+<pre><code>void tryToProcess( char* file, const char* pattern )
+{
+    FILE* stream;
+    if ( (stream = fopen( file, &quot;r&quot; )) )
+    {
+        if ( DEBUG ) fprintf( stderr, &quot;Processing: %s\n&quot;, file );
+        process( stream, pattern );
+        fclose( stream );
+    }
+}</code></pre>
+<pre><code>void process( FILE* stream, const char* pattern )
+{
+    char* line;
+    do
+    {
+        line = readline( stream );
+        if ( line )
+        {
+            switch ( line[0] )
+            {
+            case &#39;~&#39;:
+                if ( DEBUG ) fprintf( stderr, &quot;@%s&quot;, line );
+                processPreformatted( line, stream, pattern );
+                break;
+            default:
+                if ( DEBUG ) fprintf( stderr, &quot;@%s&quot;, line );
+            }
+            free( line );
+        }
+    } while ( line );
+}</code></pre>
+<pre><code>void processPreformatted( char* line, FILE* stream, const char* pattern )
+{
+    int   loop = 1;
+    char* pre;
+
+    FILE* out  = stderr;
+    char* c    = &quot;@&quot;;
+
+    if ( 0 == strncmp( pattern, line, strlen(pattern) ) )
+    {
+        out = stdout;
+        c   = &quot;&quot;;
+    }
+
+    do
+    {
+        pre = readline( stream );
+        if ( pre )
+        {
+            if ( STRIP )
+            {
+                switch ( pre[0] )
+                {
+                case &#39;~&#39;:
+                    if ( DEBUG ) fprintf( stderr, &quot;@%s&quot;, pre );
+                    loop = 0;
+                    break;
+                case &#39;/&#39;:
+                    if ( &#39;/&#39; == pre[1] ) fprintf( out, &quot;;\n&quot; );
+                    break;
+                case &#39;D&#39;:
+                case &#39;d&#39;:
+                    if ( 0 == strncmp( &quot;DROP&quot;,      pre, strlen( &quot;DROP&quot;      ) ) ) break;
+                    if ( 0 == strncmp( &quot;drop&quot;,      pre, strlen( &quot;drop&quot;      ) ) ) break;
+                    if ( 0 == strncmp( &quot;DELIMITER&quot;, pre, strlen( &quot;DELIMITER&quot; ) ) ) break;
+                    if ( 0 == strncmp( &quot;delimiter&quot;, pre, strlen( &quot;delimiter&quot; ) ) ) break;
+                default:
+                    if ( 0 != strncmp( &quot;@&quot;, c, 1 ) ) fprintf( out, &quot;%s%s&quot;, c, pre );
+                }
+            }
+            else
+            {
+                switch ( pre[0] )
+                {
+                case &#39;~&#39;:
+                    if ( DEBUG ) fprintf( stderr, &quot;@%s&quot;, pre );
+                    loop = 0;
+                    break;
+                case &#39;D&#39;:
+                case &#39;d&#39;:
+                    if ( 0 == strncmp( &quot;DROP&quot;,      pre, strlen( &quot;DROP&quot;      ) ) ) break;
+                    if ( 0 == strncmp( &quot;drop&quot;,      pre, strlen( &quot;drop&quot;      ) ) ) break;
+                    if ( 0 == strncmp( &quot;delimiter&quot;, pre, strlen( &quot;delimiter&quot; ) ) ) break;
+                default:
+                    if ( 0 != strncmp( &quot;@&quot;, c, 1 ) ) fprintf( out, &quot;%s%s&quot;, c, pre );
+                }
+            }
+            free( pre );
+        } else {
+            loop = 0;
+        }
+    }
+    while ( loop );
+}</code></pre>
+<pre><code>char* readline( FILE* stream )
+{
+    int   n = 0;
+    char* line = calloc( 1024, sizeof(char) );
+    char* ptr  = calloc( 10,  sizeof(char) );
+    int read;
+    do
+    {
+        read = fread( ptr, sizeof(char), 1, stream );
+        if ( read )
+        {
+            switch( *ptr )
+            {
+            case &#39;\n&#39;:
+                line[n++] = *ptr;
+                read = 0;
+                break;
+            default:
+                line[n++] = *ptr;
+            }
+        }
+    } while ( 0 != read );
+    free( ptr );
+
+    if ( n )
+    {
+        return line;
+    }
+    else
+    {
+        free( line );
+        return NULL;
+    }
+}</code></pre>
