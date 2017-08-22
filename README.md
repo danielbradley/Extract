@@ -13,7 +13,7 @@ however, some systems such as Github, allow remaining text to hint at a programm
 Likewise, 'Extract' uses these superfluous characters as a pattern that identifies the pre-formatted text block.
 The following pre-formatted text block begins with the tag "```sql.tables", which identifies it with the pattern "tables".
 
-```tables.sql
+```tables.sql sql
 CREATE TABLE users
 (
 	USER        INT  AUTO_INCREMENT,
