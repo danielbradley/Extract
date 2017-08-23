@@ -112,24 +112,86 @@ if 'DEBUG' is set to 'TRUE', extra debugging lines are output to the standard er
 if 'STRIP' is set to 'TRUE', extract will strip lines beginning with 'DELIMITER' from the ouput.
 
 ```main.c
-static bool DEBUG = 0;
-static bool STRIP = 0;
+static bool DEBUG = FALSE;
+static bool STRIP = FALSE;
 ```
 
 ### High-level function structure
 
-
+'Extract' has a simple call-graph, which is shown below:
 
 ```
-int    argumentsContains();
-char*  argumentsGetValue();
+main
+ |-- argumentsContains
+ |-- argumentsGetValue
+ |-- usage
+ |-- generatePattern
+ |-- tryToProcess
+      |-- process
+           |-- readline
+           |-- processPreformatted
+```
+
+An summary of these functions is given, then their implementation is discussed in detail.
+
+```main.c
+int                 main( int argc, char** argv );
+```
+
+The 'main' function is responsible for checking whether appropriate arguments have been passed and:
+if so, calling tryToProcess on each file and;
+if not, calling the 'usage' function.
+
+```main.c
+bool  argumentsContains( int argc, char** argv, char* flag );
+```
+
+The 'argumentsContains' function check each of the arguments passed to main to see if it matches the specified flag.
+
+```main.c
+char* argumentsGetValue( int n, char** files, char* flag )
+```
+
+The 'argumentsGetValue' function retrieves (if appropriate) the value following a specific flag.
+
+```main.c
 int                usage();
-char*    generatePattern( const char* );
-void        tryToProcess( char*, const char* );
+```
+
+The 'usage' function simply prints out the usage string and always returns -1.
+
+```main.c
+char*    generatePattern( const char* pattern );
+```
+
+The 'generate' pattern function is used to generate the line delimiter to be searched for in the input files.
+
+```main.c
+void        tryToProcess( char* file, const char* line_pattern );
+```
+
+The 'tryToProcess' function tries to open the passed file, and if successful passes the opened stream to
+'process' along with the passed line pattern.
+
+```main.c
 void             process( FILE*, const char* );
+```
+
+The 'process' function reads each line of the passed stream,
+and if the passed line pattern is found outputs any further lines to standard output
+until an end delimiter is encountered.
+
+```main.c
 char*           readline( FILE* );
+```
+
+The 'readline' function reimplements the UNIX readline function for portability.
+
+```main.c
 void processPreformatted( char* line, FILE*, const char* pattern );
 ```
+
+### Low-level
 
 
 ```
