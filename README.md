@@ -26,7 +26,6 @@ When using Markdown, such a pre-formatted block would be delimited as such:
 ```
  ```tables
  Pre-formatted text here
- ```
 ```
 
 Unfortunately, it seems like there is no pattern that can be used with both Pandoc and Github to indicate both a pattern and a file type.
@@ -51,7 +50,7 @@ In order to accommodate  current usage of both systems -
 
 Therefore,
 
-```sql.tables
+```tables.sql
 CREATE TABLE users
 (
 	USER        INT  AUTO_INCREMENT,
