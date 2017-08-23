@@ -64,31 +64,61 @@ Source code extracted from this file may be viewed under the '_gen' directory.
  */
 ```
 
+### Dependencies
+
+'Extract' depends on functions declared in the following header files.
+
 
 ```main.c
-/* Comment */
 #include <stdlib.h>
+```
+
+This header is included to provide access to the 'calloc' and 'free' functions:
+'calloc' is used to allocate memory that has been zeroed,
+while 'free' is used to deallocate allocated memory.
+
+```main.c
 #include <stdio.h>
+```
+
+This header is included to provide access to the 'fopen', 'fclose', and 'fprintf' functions:
+'fopen' is used to open the files indicated by the command-line arguments,
+'fclose' is used to close those files, and
+'fprintf' is used to write pre-formatted text blocks to the standard output stream.
+
+
+```main.c
 #include <string.h>
 ```
 
-```!main.js
-Ronald.McDonald
-=
-function( responseText )
-{
-	var json = JSON.parse( responseText )
+This header is included to provide access to the 'strdup', 'strcmp', 'strncmp', 'strlen', 'strpcpy', and functions:
+'strdup' is used to duplicate the passed string,
+'strcmp' and 'strncmp' are used to compare whether two strings are equal ('strcmp'), or whether one is a prefix of the other ('strncmp').
+'strlen' is used to find the length of a string, and
+'strpcpy' is used to ???
 
-	if ( "OK" == json.status )
-	{
-		location.reload()
-	}
-}
+### Defined types and values
+
+The 'int' type is typecast to a 'bool' for readability.
+
+```main.c
+typedef int bool;
 ```
 
+### Global state
+
+The implementation has two global variables:
+if 'DEBUG' is set to 'TRUE', extra debugging lines are output to the standard error stream.
+if 'STRIP' is set to 'TRUE', extract will strip lines beginning with 'DELIMITER' from the ouput.
+
+```main.c
+static bool DEBUG = 0;
+static bool STRIP = 0;
 ```
-static int DEBUG = 0;
-```
+
+### High-level function structure
+
+
 
 ```
 int    argumentsContains();
@@ -101,9 +131,6 @@ char*           readline( FILE* );
 void processPreformatted( char* line, FILE*, const char* pattern );
 ```
 
-```
-int STRIP;
-```
 
 ```
 int main( int argc, char** files )

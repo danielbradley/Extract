@@ -19,22 +19,22 @@
 <div class="sourceCode"><pre class="sourceCode !main.c"><code class="sourceCode c"><span class="co">/*</span>
 <span class="co"> *  !!! This document has been auto-generated using quasi !!!</span>
 <span class="co"> */</span></code></pre></div>
-<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="co">/* Comment */</span>
-<span class="pp">#include </span><span class="im">&lt;stdlib.h&gt;</span>
-<span class="pp">#include </span><span class="im">&lt;stdio.h&gt;</span>
-<span class="pp">#include </span><span class="im">&lt;string.h&gt;</span></code></pre></div>
-<div class="sourceCode"><pre class="sourceCode !main.js"><code class="sourceCode javascript"><span class="va">Ronald</span>.<span class="at">McDonald</span>
-<span class="op">=</span>
-<span class="kw">function</span>( responseText )
-<span class="op">{</span>
-    <span class="kw">var</span> json <span class="op">=</span> <span class="va">JSON</span>.<span class="at">parse</span>( responseText )
-
-    <span class="cf">if</span> ( <span class="st">&quot;OK&quot;</span> <span class="op">==</span> <span class="va">json</span>.<span class="at">status</span> )
-    <span class="op">{</span>
-        <span class="va">location</span>.<span class="at">reload</span>()
-    <span class="op">}</span>
-<span class="op">}</span></code></pre></div>
-<pre><code>static int DEBUG = 0;</code></pre>
+<h3 id="dependencies">Dependencies</h3>
+<p>'Extract' depends on functions declared in the following header files.</p>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="pp">#include </span><span class="im">&lt;stdlib.h&gt;</span></code></pre></div>
+<p>This header is included to provide access to the 'calloc' and 'free' functions: 'calloc' is used to allocate memory that has been zeroed, while 'free' is used to deallocate allocated memory.</p>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="pp">#include </span><span class="im">&lt;stdio.h&gt;</span></code></pre></div>
+<p>This header is included to provide access to the 'fopen', 'fclose', and 'fprintf' functions: 'fopen' is used to open the files indicated by the command-line arguments, 'fclose' is used to close those files, and 'fprintf' is used to write pre-formatted text blocks to the standard output stream.</p>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="pp">#include </span><span class="im">&lt;string.h&gt;</span></code></pre></div>
+<p>This header is included to provide access to the 'strdup', 'strcmp', 'strncmp', 'strlen', 'strpcpy', and functions: 'strdup' is used to duplicate the passed string, 'strcmp' and 'strncmp' are used to compare whether two strings are equal ('strcmp'), or whether one is a prefix of the other ('strncmp'). 'strlen' is used to find the length of a string, and 'strpcpy' is used to ???</p>
+<h3 id="defined-types-and-values">Defined types and values</h3>
+<p>The 'int' type is typecast to a 'bool' for readability.</p>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="kw">typedef</span> <span class="dt">int</span> bool;</code></pre></div>
+<h3 id="global-state">Global state</h3>
+<p>The implementation has two global variables: if 'DEBUG' is set to 'TRUE', extra debugging lines are output to the standard error stream. if 'STRIP' is set to 'TRUE', extract will strip lines beginning with 'DELIMITER' from the ouput.</p>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">static</span> bool DEBUG = <span class="dv">0</span>;
+<span class="dt">static</span> bool STRIP = <span class="dv">0</span>;</code></pre></div>
+<h3 id="high-level-function-structure">High-level function structure</h3>
 <pre><code>int    argumentsContains();
 char*  argumentsGetValue();
 int                usage();
@@ -43,7 +43,6 @@ void        tryToProcess( char*, const char* );
 void             process( FILE*, const char* );
 char*           readline( FILE* );
 void processPreformatted( char* line, FILE*, const char* pattern );</code></pre>
-<pre><code>int STRIP;</code></pre>
 <pre><code>int main( int argc, char** files )
 {
     STRIP     = argumentsContains( argc, files, &quot;-s&quot; ) ? 1 : 0;
