@@ -40,7 +40,7 @@
  |-- argumentsContains
  |-- argumentsGetValue
  |-- usage
- |-- generatePattern
+ |-- generateDelimiter
  |-- tryToProcess
       |-- process
            |-- readline
@@ -54,7 +54,7 @@
 <p>The 'argumentsGetValue' function retrieves (if appropriate) the value following a specific flag.</p>
 <div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">int</span> usage();</code></pre></div>
 <p>The 'usage' function simply prints out the usage string and always returns -1.</p>
-<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">char</span>* generatePattern( <span class="dt">const</span> <span class="dt">char</span>* pattern );</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">char</span>* generateDelimiter( <span class="dt">const</span> <span class="dt">char</span>* pattern );</code></pre></div>
 <p>The 'generate' pattern function is used to generate the line delimiter to be searched for in the input files.</p>
 <div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">void</span> tryToProcess( <span class="dt">char</span>* file, <span class="dt">const</span> <span class="dt">char</span>* line_pattern );</code></pre></div>
 <p>The 'tryToProcess' function tries to open the passed file, and if successful passes the opened stream to 'process' along with the passed line pattern.</p>
@@ -66,25 +66,29 @@
 <p>The 'processPreformatted' function is used to strip out lines starting with specific keywords such as 'DELIMITER', or 'DROP', which (in the case of SQL) it is often desirous to remove for installation scripts.</p>
 <h3 id="low-level-implemention-function-descriptions">Low-level implemention function descriptions</h3>
 <h4 id="function-main">Function: main</h4>
+<p>The main function first processes the passed arguments to retrieve the pattern, and to determine whether the <em>strip</em> flag has been passed, e.g., ('-s').</p>
+<p>If a pattern has not been passed, or the number of arguments passed are less than expected, the usage() function is called and exit is called.</p>
+<p>Otherwise, each file passed in the arguments is passed to the 'tryToProcess' function along with the <em>line delimiter</em>.</p>
 <pre><code>int main( int argc, char** files )
 {
-    STRIP     = argumentsContains( argc, files, &quot;-s&quot; ) ? 1 : 0;
     char* pat = argumentsGetValue( argc, files, &quot;-p&quot; );
+    STRIP     = argumentsContains( argc, files, &quot;-s&quot; ) ? 1 : 0;
 
-    int expected_arguments = 4 + STRIP; // extract -p &quot;some pattern&quot; files [-s]
+                                        // 1.       2.  3.  4.            5.
+    int expected_arguments = 4 + STRIP; // extract [-s] -p &quot;some pattern&quot; file...
 
     if ( ! pat )
     {
-        return usage();
+        exit( usage() );
     }
     else
     if ( argc &lt; expected_arguments )
     {
-        return usage();
+        exit( usage() );
     }
     else
     {
-        char* pattern = generatePattern( pat );
+        char* line_delimiter = generateDelimiter( pat );
         int i;
         for ( i=expected_arguments; i &lt; argc; i++ )
         {
@@ -136,16 +140,16 @@
     fprintf( stderr, &quot;Usage:\n\textract [-s] -p &lt;pattern&gt; &lt;file&gt; [more files] [ &gt; output file ]\n&quot; );
     return -1;
 }</code></pre>
-<h4 id="function-generatepattern">Function: generatePattern</h4>
-<pre><code>char* generatePattern( const char* pat )
+<h4 id="function-generatedelimiter">Function: generateDelimiter</h4>
+<pre><code>char* generateDelimiter( const char* pat )
 {
-    int len = strlen( pat );
-    char* pattern = calloc( len + 3, sizeof(char) );
-    char* tmp = pattern;
-    tmp = stpcpy( tmp, &quot;~&quot; );
-    tmp = stpcpy( tmp, pat );
-    tmp = stpcpy( tmp, &quot;~&quot; );
-    return pattern;
+    char* delimiter = calloc( strlen( pat ) + 3, sizeof(char) );
+    char* tmp       = delimiter;
+          tmp       = stpcpy( tmp, &quot;~&quot; );
+          tmp       = stpcpy( tmp, pat );
+          tmp       = stpcpy( tmp, &quot;~&quot; );
+
+    return delimiter;
 }</code></pre>
 <h4 id="function-trytoprocess">Function: tryToProcess</h4>
 <pre><code>void tryToProcess( char* file, const char* pattern )

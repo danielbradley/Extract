@@ -125,7 +125,7 @@ main
  |-- argumentsContains
  |-- argumentsGetValue
  |-- usage
- |-- generatePattern
+ |-- generateDelimiter
  |-- tryToProcess
       |-- process
            |-- readline
@@ -161,7 +161,7 @@ int usage();
 The 'usage' function simply prints out the usage string and always returns -1.
 
 ```main.c
-char* generatePattern( const char* pattern );
+char* generateDelimiter( const char* pattern );
 ```
 
 The 'generate' pattern function is used to generate the line delimiter to be searched for in the input files.
@@ -200,26 +200,36 @@ which (in the case of SQL) it is often desirous to remove for installation scrip
 
 #### Function: main
 
+The main function first processes the passed arguments to retrieve the pattern,
+and to determine whether the *strip* flag has been passed, e.g., ('-s').
+
+If a pattern has not been passed, or the number of arguments passed are less than expected,
+the usage() function is called and exit is called.
+
+Otherwise, each file passed in the arguments is passed to the 'tryToProcess' function
+along with the *line delimiter*.
+
 ```
 int main( int argc, char** files )
 {
-	STRIP     = argumentsContains( argc, files, "-s" ) ? 1 : 0;
 	char* pat = argumentsGetValue( argc, files, "-p" );
+	STRIP     = argumentsContains( argc, files, "-s" ) ? 1 : 0;
 
-	int expected_arguments = 4 + STRIP; // extract -p "some pattern" files [-s]
+                                        // 1.       2.  3.  4.            5.
+	int expected_arguments = 4 + STRIP; // extract [-s] -p "some pattern" file...
 
 	if ( ! pat )
 	{
-		return usage();
+		exit( usage() );
 	}
 	else
 	if ( argc < expected_arguments )
 	{
-		return usage();
+		exit( usage() );
 	}
 	else
 	{
-		char* pattern = generatePattern( pat );
+		char* line_delimiter = generateDelimiter( pat );
 		int i;
 		for ( i=expected_arguments; i < argc; i++ )
 		{
@@ -285,18 +295,18 @@ int usage()
 }
 ```
 
-#### Function: generatePattern
+#### Function: generateDelimiter
 
 ```
-char* generatePattern( const char* pat )
+char* generateDelimiter( const char* pat )
 {
-	int len = strlen( pat );
-	char* pattern = calloc( len + 3, sizeof(char) );
-	char* tmp = pattern;
-	tmp = stpcpy( tmp, "~" );
-	tmp = stpcpy( tmp, pat );
-	tmp = stpcpy( tmp, "~" );
-	return pattern;
+	char* delimiter = calloc( strlen( pat ) + 3, sizeof(char) );
+	char* tmp       = delimiter;
+	      tmp       = stpcpy( tmp, "~" );
+	      tmp       = stpcpy( tmp, pat );
+	      tmp       = stpcpy( tmp, "~" );
+
+	return delimiter;
 }
 ```
 
