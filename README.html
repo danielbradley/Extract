@@ -1,39 +1,53 @@
 <h1 id="extract">Extract</h1>
 <p>'Extract' is a command line tool for extracting SQL and other code from marked up text files that are able to represent pre-formated text sections.</p>
 <p>Currently, two such text formats are explicitly supported - Markdown and MaxText. MaxText is a plain text markup system that is similar conceptually to Markdown.</p>
-<p>Markdown uses a triplet of back-ticks (&quot;```&quot;) in the left-most column to indicate the start and end of a pre-formatted text section, while Maxtext uses a tilde ('~') character. Techically, both text systems ignore any remaining text on the line, however, some systems such as Github, allow remaining text to hint at a programming language.</p>
-<p>Likewise, 'Extract' uses these superfluous characters as a pattern that identifies the pre-formatted text block. The following pre-formatted text block begins with the tag &quot;```sql.tables&quot;, which identifies it with the pattern &quot;tables&quot;.</p>
-<div class="sourceCode"><pre class="sourceCode tables.sql"><code class="sourceCode sql"><span class="kw">CREATE</span> <span class="kw">TABLE</span> users
+<p>Markdown uses a triplet of back-ticks (&quot;```&quot;) in the left-most column to indicate the start and end of a pre-formatted text section, while Maxtext uses a tilde ('~') character. While, technically, both text systems ignore any remaining text on the line, some systems such as Github, allow remaining text to hint at a programming language, and others such as Pandoc may not recognise the delimiter if there are spaces in any remaining text.</p>
+<p>'Extract' uses these superfluous characters to indicate a pattern that will be matched against a pattern passed as a common-line argument. For example, when run, the following command line matches pre-formatted sections in the specified files that contain the pattern 'tables'.</p>
+<pre><code>extract -p &quot;tables&quot; source/mt/file.txt &gt; sql/tables.sql</code></pre>
+<p>When using Markdown, such a pre-formatted block would be delimited as such:</p>
+<pre><code> ```tables
+ Pre-formatted text here
+ ```</code></pre>
+<p>Unfortunately, it seems like there is no pattern that can be used with both Pandoc and Github to indicate both a pattern and a file type. For example, Github will accept a delimiter such as that below and appropriately mark it up as SQL:</p>
+<pre><code> ```tables sql</code></pre>
+<p>However, Pandoc does not seem to accept such a delimiter, but rather will accept the following, which is not accepted by Github:</p>
+<pre><code> ```tables.sql</code></pre>
+<p>The following pre-formatted text block begins with the tag &quot;```sql tables&quot;, which identifies it with the pattern &quot;tables&quot;. Similarly, a MaxText block would begin with the tag &quot;<sub>tables</sub>&quot;. Therefore, the pattern used by 'extract' In order to accommodate current usage of both systems -</p>
+<p>Therefore,</p>
+<pre class="sql.tables"><code>CREATE TABLE users
 (
-    <span class="fu">USER</span>        <span class="dt">INT</span>  AUTO_INCREMENT,
-    given_name  TEXT <span class="kw">DEFAULT</span> <span class="st">&#39;&#39;</span>,
-    family_name TEXT <span class="kw">DEFAULT</span> <span class="st">&#39;&#39;</span>,
+    USER        INT  AUTO_INCREMENT,
+    given_name  TEXT DEFAULT &#39;&#39;,
+    family_name TEXT DEFAULT &#39;&#39;,
 
-    <span class="kw">PRIMARY</span> <span class="kw">KEY</span> (<span class="fu">USER</span>)
-);</code></pre></div>
+    PRIMARY KEY (USER)
+);</code></pre>
 <p>Calling extract and supplying the pattern &quot;tables&quot;, any such pre-formatted text sections, in any processed files, will be output.</p>
-<pre><code>extract -p &quot;tables&quot; source/mt/*.txt &gt; sql/tables.sql</code></pre>
-<div class="sourceCode"><pre class="sourceCode !main.c"><code class="sourceCode c"><span class="co">/*</span>
-<span class="co"> *      Extract</span>
-<span class="co"> *</span>
-<span class="co"> *      This is a generalisatin of the extract SQL program -- its purpose</span>
-<span class="co"> *      is to extract pre-formatted segments from MaxText documentation</span>
-<span class="co"> *      source files.</span>
-<span class="co"> *</span>
-<span class="co"> *      If the first argument is &quot;-p&quot;, the second argument is treated as a</span>
-<span class="co"> *      &quot;pattern&quot; specifier. The pattern matched is &#39;~&#39; . &lt;pattern&gt; . &#39;~&#39;.</span>
-<span class="co"> *</span>
-<span class="co"> *      Further arguments to the command-line are treated as MaxText files. Each</span>
-<span class="co"> *      file is (read-only) processed in turn and output to the standard out.</span>
-<span class="co"> *</span>
-<span class="co"> *      For each file lines are output to stdout if they existing between a</span>
-<span class="co"> *      line that starts with the specified pattern and a line that starts with &quot;~&quot;.</span>
-<span class="co"> *</span>
-<span class="co"> *      Usage:</span>
-<span class="co"> *</span>
-<span class="co"> *          extract -p &quot;sql&quot; &lt;MaxText Files&gt; [ &gt; output file]</span>
-<span class="co"> *</span>
-<span class="co"> */</span></code></pre></div>
+<!--
+```!main.c
+/*
+ *      Extract
+ *
+ *      This is a generalisatin of the extract SQL program -- its purpose
+ *      is to extract pre-formatted segments from MaxText documentation
+ *      source files.
+ *
+ *      If the first argument is "-p", the second argument is treated as a
+ *      "pattern" specifier. The pattern matched is '~' . <pattern> . '~'.
+ *
+ *      Further arguments to the command-line are treated as MaxText files. Each
+ *      file is (read-only) processed in turn and output to the standard out.
+ *
+ *      For each file lines are output to stdout if they existing between a
+ *      line that starts with the specified pattern and a line that starts with "~".
+ *
+ *      Usage:
+ *
+ *          extract -p "sql" <MaxText Files> [ > output file]
+ *
+ */
+```
+-->
 <div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="pp">#include </span><span class="im">&lt;stdlib.h&gt;</span>
 <span class="pp">#include </span><span class="im">&lt;stdio.h&gt;</span>
 <span class="pp">#include </span><span class="im">&lt;string.h&gt;</span></code></pre></div>

@@ -7,13 +7,51 @@ Currently, two such text formats are explicitly supported - Markdown and MaxText
 MaxText is a plain text markup system that is similar conceptually to Markdown.
 
 Markdown uses a triplet of back-ticks ("```") in the left-most column to indicate the start and end of a pre-formatted text section, while Maxtext uses a tilde ('~') character.
-Techically, both text systems ignore any remaining text on the line,
-however, some systems such as Github, allow remaining text to hint at a programming language.
+While, technically, both text systems ignore any remaining text on the line,
+some systems such as Github, allow remaining text to hint at a programming language,
+and others such as Pandoc may not recognise the delimiter if there are spaces in any remaining text.
 
-Likewise, 'Extract' uses these superfluous characters as a pattern that identifies the pre-formatted text block.
-The following pre-formatted text block begins with the tag "```sql.tables", which identifies it with the pattern "tables".
+'Extract' uses these superfluous characters to indicate a pattern that will be matched against a pattern passed
+as a common-line argument.
+For example,
+when run,
+the following command line matches pre-formatted sections in the specified files that contain the pattern 'tables'.
 
-```sql tables
+```
+extract -p "tables" source/mt/file.txt > sql/tables.sql
+```
+
+When using Markdown, such a pre-formatted block would be delimited as such:
+
+```
+ ```tables
+ Pre-formatted text here
+ ```
+```
+
+Unfortunately, it seems like there is no pattern that can be used with both Pandoc and Github to indicate both a pattern and a file type.
+For example, Github will accept a delimiter such as that below and appropriately mark it up as SQL:
+
+```
+ ```tables sql
+```
+
+However, Pandoc does not seem to accept such a delimiter, but rather will accept the following,
+which is not accepted by Github:
+
+```
+ ```tables.sql
+```
+
+
+The following pre-formatted text block begins with the tag "```sql tables", which identifies it with the pattern "tables".
+Similarly, a MaxText block would begin with the tag "~tables~".
+Therefore, the pattern used by 'extract' 
+In order to accommodate  current usage of both systems -
+
+Therefore,
+
+```sql.tables
 CREATE TABLE users
 (
 	USER        INT  AUTO_INCREMENT,
@@ -26,10 +64,8 @@ CREATE TABLE users
 
 Calling extract and supplying the pattern "tables", any such pre-formatted text sections, in any processed files, will be output.
 
-```
-extract -p "tables" source/mt/*.txt > sql/tables.sql
-```
 
+<!--
 ```!main.c
 /*
  *		Extract
@@ -53,6 +89,7 @@ extract -p "tables" source/mt/*.txt > sql/tables.sql
  *
  */
 ```
+-->
 
 ```main.c
 #include <stdlib.h>
