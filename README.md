@@ -209,7 +209,7 @@ the usage() function is called and exit is called.
 Otherwise, each file passed in the arguments is passed to the 'tryToProcess' function
 along with the *line delimiter*.
 
-```
+```main.c
 int main( int argc, char** files )
 {
 	char* pat = argumentsGetValue( argc, files, "-p" );
@@ -246,7 +246,7 @@ int main( int argc, char** files )
 
 #### Function: argumentContains
 
-```
+```main.c
 int argumentsContains( int n, char** files, char* flag )
 {
 	int b = 0;
@@ -266,7 +266,7 @@ int argumentsContains( int n, char** files, char* flag )
 
 #### Function: argumentGetValue
 
-```
+```main.c
 char* argumentsGetValue( int n, char** files, char* flag )
 {
 	char* ret = NULL;
@@ -287,7 +287,7 @@ char* argumentsGetValue( int n, char** files, char* flag )
 
 #### Function: usage
 
-```
+```main.c
 int usage()
 {
 	fprintf( stderr, "Usage:\n\textract [-s] -p <pattern> <file> [more files] [ > output file ]\n" );
@@ -297,7 +297,7 @@ int usage()
 
 #### Function: generateDelimiter
 
-```
+```main.c
 char* generateDelimiter( const char* pat )
 {
 	char* delimiter = calloc( strlen( pat ) + 3, sizeof(char) );
@@ -312,7 +312,7 @@ char* generateDelimiter( const char* pat )
 
 #### Function: tryToProcess
 
-```
+```main.c
 void tryToProcess( char* file, const char* pattern )
 {
 	FILE* stream;
@@ -327,7 +327,7 @@ void tryToProcess( char* file, const char* pattern )
 
 #### Function: process
 
-```
+```main.c
 void process( FILE* stream, const char* pattern )
 {
 	char* line;
@@ -353,7 +353,7 @@ void process( FILE* stream, const char* pattern )
 
 #### Function: processPreformatted
 
-```
+```main.c
 void processPreformatted( char* line, FILE* stream, const char* pattern )
 {
 	int   loop = 1;
@@ -422,7 +422,7 @@ void processPreformatted( char* line, FILE* stream, const char* pattern )
 
 #### Function: readline
 
-```
+```main.c
 char* readline( FILE* stream )
 {
 	int   n = 0;
@@ -461,7 +461,7 @@ char* readline( FILE* stream )
 
 #### Function: stringEquals
 
-```
+```main.c
 int stringEquals( const char* one, const char* two )
 {
 	return (0 == strcmp( one, two ));
@@ -470,7 +470,7 @@ int stringEquals( const char* one, const char* two )
 
 #### Function: stringHasPrefix
 
-```
+```main.c
 int stringHasPrefix( const char* string, const char* prefix )
 {
     int len = strlen( prefix )

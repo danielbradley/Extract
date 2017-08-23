@@ -4,10 +4,10 @@ pull:
 	git pull
 
 quasi:
-	quasi -f output README.md
+	quasi -f _gen README.md
 
 pandoc:
-	pandoc -o README.html README.md
+	pandoc -o _gen/README.html README.md
 
 push:
 	git add .
@@ -15,4 +15,4 @@ push:
 	git push
 
 clean:
-	rm -rf output
+	rm -rf _gen
