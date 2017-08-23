@@ -15,33 +15,12 @@
 <p>Hopefully, in the future one of these two systems will be modified so that they can support similar patterns.</p>
 <h2 id="implementation">Implementation</h2>
 <p>The following sections describe the current implementation of 'Extract'. This implementation now uses the &quot;quasi-literate programming&quot; style as described at: [https://www.quasi-literateprogramming.org]. To facilitate this implementation that now supports Markdown, the tool 'quasi' was also extended to support Markdown.</p>
-<p>Source code extracted from this file may be viewed under the '_gen' directory here: [./_gen/].</p>
-<!--
-```!main.c
-/*
- *      Extract
- *
- *      This is a generalisatin of the extract SQL program -- its purpose
- *      is to extract pre-formatted segments from MaxText documentation
- *      source files.
- *
- *      If the first argument is "-p", the second argument is treated as a
- *      "pattern" specifier. The pattern matched is '~' . <pattern> . '~'.
- *
- *      Further arguments to the command-line are treated as MaxText files. Each
- *      file is (read-only) processed in turn and output to the standard out.
- *
- *      For each file lines are output to stdout if they existing between a
- *      line that starts with the specified pattern and a line that starts with "~".
- *
- *      Usage:
- *
- *          extract -p "sql" <MaxText Files> [ > output file]
- *
- */
-```
--->
-<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="pp">#include </span><span class="im">&lt;stdlib.h&gt;</span>
+<p>Source code extracted from this file may be viewed under the '_gen' directory.</p>
+<div class="sourceCode"><pre class="sourceCode !main.c"><code class="sourceCode c"><span class="co">/*</span>
+<span class="co"> *  !!! This document has been auto-generated using quasi !!!</span>
+<span class="co"> */</span></code></pre></div>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="co">/* Comment */</span>
+<span class="pp">#include </span><span class="im">&lt;stdlib.h&gt;</span>
 <span class="pp">#include </span><span class="im">&lt;stdio.h&gt;</span>
 <span class="pp">#include </span><span class="im">&lt;string.h&gt;</span></code></pre></div>
 <div class="sourceCode"><pre class="sourceCode !main.js"><code class="sourceCode javascript"><span class="va">Ronald</span>.<span class="at">McDonald</span>

@@ -66,6 +66,7 @@ Source code extracted from this file may be viewed under the '_gen' directory.
 
 
 ```main.c
+/* Comment */
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
