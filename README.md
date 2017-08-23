@@ -50,9 +50,13 @@ Hopefully, in the future one of these two systems will be modified so that they 
 
 ## Implementation
 
-The following sections describe the implementation of 'Extract'.
-This implementation uses the "quasi-literate programming" style as described at:
+The following sections describe the current implementation of 'Extract'.
+This implementation now uses the "quasi-literate programming" style as described at:
 [https://www.quasi-literateprogramming.org].
+To facilitate this implementation that now supports Markdown,
+the tool 'quasi' was also extended to support Markdown.
+
+Source code extracted from this file may be viewed under the '_gen' directory here: [./_gen/].
 
 
 
