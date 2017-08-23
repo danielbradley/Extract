@@ -135,7 +135,7 @@ main
 An summary of these functions is given, then their implementation is discussed in detail.
 
 ```main.c
-int                 main( int argc, char** argv );
+int main( int argc, char** argv );
 ```
 
 The 'main' function is responsible for checking whether appropriate arguments have been passed and:
@@ -143,7 +143,7 @@ if so, calling tryToProcess on each file and;
 if not, calling the 'usage' function.
 
 ```main.c
-bool  argumentsContains( int argc, char** argv, char* flag );
+bool argumentsContains( int argc, char** argv, char* flag );
 ```
 
 The 'argumentsContains' function check each of the arguments passed to main to see if it matches the specified flag.
@@ -155,26 +155,26 @@ char* argumentsGetValue( int n, char** files, char* flag )
 The 'argumentsGetValue' function retrieves (if appropriate) the value following a specific flag.
 
 ```main.c
-int                usage();
+int usage();
 ```
 
 The 'usage' function simply prints out the usage string and always returns -1.
 
 ```main.c
-char*    generatePattern( const char* pattern );
+char* generatePattern( const char* pattern );
 ```
 
 The 'generate' pattern function is used to generate the line delimiter to be searched for in the input files.
 
 ```main.c
-void        tryToProcess( char* file, const char* line_pattern );
+void tryToProcess( char* file, const char* line_pattern );
 ```
 
 The 'tryToProcess' function tries to open the passed file, and if successful passes the opened stream to
 'process' along with the passed line pattern.
 
 ```main.c
-void             process( FILE*, const char* );
+void process( FILE*, const char* );
 ```
 
 The 'process' function reads each line of the passed stream,
@@ -182,7 +182,7 @@ and if the passed line pattern is found outputs any further lines to standard ou
 until an end delimiter is encountered.
 
 ```main.c
-char*           readline( FILE* );
+char* readline( FILE* );
 ```
 
 The 'readline' function reimplements the UNIX readline function for portability.
