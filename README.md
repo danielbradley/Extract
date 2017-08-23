@@ -42,28 +42,18 @@ which is not accepted by Github:
  ```tables.sql
 ```
 
-
-The following pre-formatted text block begins with the tag "```sql tables", which identifies it with the pattern "tables".
-Similarly, a MaxText block would begin with the tag "~tables~".
-Therefore, the pattern used by 'extract' 
-In order to accommodate  current usage of both systems -
-
 Therefore, if you will only be using Github you can use a pattern that has a space then 'sql',
 however, if you will be using Pandoc, use a pattern with no spaces in it.
 
+Hopefully, in the future one of these two systems will be modified so that they can support similar patterns.
 
-```tables.sql
-CREATE TABLE users
-(
-	USER        INT  AUTO_INCREMENT,
-	given_name  TEXT DEFAULT '',
-	family_name TEXT DEFAULT '',
 
-	PRIMARY KEY (USER)
-);
-```
+## Implementation
 
-Calling extract and supplying the pattern "tables", any such pre-formatted text sections, in any processed files, will be output.
+The following sections describe the implementation of 'Extract'.
+This implementation uses the "quasi-literate programming" style as described at:
+[https://www.quasi-literateprogramming.org].
+
 
 
 <!--

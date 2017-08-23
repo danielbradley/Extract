@@ -11,17 +11,10 @@
 <pre><code> ```tables sql</code></pre>
 <p>However, Pandoc does not seem to accept such a delimiter, but rather will accept the following, which is not accepted by Github:</p>
 <pre><code> ```tables.sql</code></pre>
-<p>The following pre-formatted text block begins with the tag &quot;```sql tables&quot;, which identifies it with the pattern &quot;tables&quot;. Similarly, a MaxText block would begin with the tag &quot;<sub>tables</sub>&quot;. Therefore, the pattern used by 'extract' In order to accommodate current usage of both systems -</p>
-<p>Therefore,</p>
-<div class="sourceCode"><pre class="sourceCode tables.sql"><code class="sourceCode sql"><span class="kw">CREATE</span> <span class="kw">TABLE</span> users
-(
-    <span class="fu">USER</span>        <span class="dt">INT</span>  AUTO_INCREMENT,
-    given_name  TEXT <span class="kw">DEFAULT</span> <span class="st">&#39;&#39;</span>,
-    family_name TEXT <span class="kw">DEFAULT</span> <span class="st">&#39;&#39;</span>,
-
-    <span class="kw">PRIMARY</span> <span class="kw">KEY</span> (<span class="fu">USER</span>)
-);</code></pre></div>
-<p>Calling extract and supplying the pattern &quot;tables&quot;, any such pre-formatted text sections, in any processed files, will be output.</p>
+<p>Therefore, if you will only be using Github you can use a pattern that has a space then 'sql', however, if you will be using Pandoc, use a pattern with no spaces in it.</p>
+<p>Hopefully, in the future one of these two systems will be modified so that they can support similar patterns.</p>
+<h2 id="implementation">Implementation</h2>
+<p>The following sections describe the implementation of 'Extract'. This implementation uses the &quot;quasi-literate programming&quot; style as described at: [https://www.quasi-literateprogramming.org].</p>
 <!--
 ```!main.c
 /*
