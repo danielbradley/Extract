@@ -48,7 +48,9 @@ Similarly, a MaxText block would begin with the tag "~tables~".
 Therefore, the pattern used by 'extract' 
 In order to accommodate  current usage of both systems -
 
-Therefore,
+Therefore, if you will only be using Github you can use a pattern that has a space then 'sql',
+however, if you will be using Pandoc, use a pattern with no spaces in it.
+
 
 ```tables.sql
 CREATE TABLE users
