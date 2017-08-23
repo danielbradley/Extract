@@ -191,8 +191,14 @@ The 'readline' function reimplements the UNIX readline function for portability.
 void processPreformatted( char* line, FILE*, const char* pattern );
 ```
 
-### Low-level
+The 'processPreformatted' function is used to strip out lines starting with specific keywords such as 'DELIMITER', or 'DROP',
+which (in the case of SQL) it is often desirous to remove for installation scripts.
 
+
+
+### Low-level implemention function descriptions
+
+#### Function: main
 
 ```
 int main( int argc, char** files )
@@ -228,6 +234,8 @@ int main( int argc, char** files )
 }
 ```
 
+#### Function: argumentContains
+
 ```
 int argumentsContains( int n, char** files, char* flag )
 {
@@ -245,6 +253,8 @@ int argumentsContains( int n, char** files, char* flag )
 	return b;
 }
 ```
+
+#### Function: argumentGetValue
 
 ```
 char* argumentsGetValue( int n, char** files, char* flag )
@@ -265,12 +275,7 @@ char* argumentsGetValue( int n, char** files, char* flag )
 }
 ```
 
-```
-int stringEquals( const char* one, const char* two )
-{
-	return (0 == strcmp( one, two ));
-}
-```
+#### Function: usage
 
 ```
 int usage()
@@ -279,6 +284,8 @@ int usage()
 	return -1;
 }
 ```
+
+#### Function: generatePattern
 
 ```
 char* generatePattern( const char* pat )
@@ -293,6 +300,8 @@ char* generatePattern( const char* pat )
 }
 ```
 
+#### Function: tryToProcess
+
 ```
 void tryToProcess( char* file, const char* pattern )
 {
@@ -305,6 +314,8 @@ void tryToProcess( char* file, const char* pattern )
 	}
 }
 ```
+
+#### Function: process
 
 ```
 void process( FILE* stream, const char* pattern )
@@ -329,6 +340,8 @@ void process( FILE* stream, const char* pattern )
 	} while ( line );
 }
 ```
+
+#### Function: processPreformatted
 
 ```
 void processPreformatted( char* line, FILE* stream, const char* pattern )
@@ -397,6 +410,8 @@ void processPreformatted( char* line, FILE* stream, const char* pattern )
 }
 ```
 
+#### Function: readline
+
 ```
 char* readline( FILE* stream )
 {
@@ -431,5 +446,25 @@ char* readline( FILE* stream )
 		free( line );
 		return NULL;
 	}
+}
+```
+
+#### Function: stringEquals
+
+```
+int stringEquals( const char* one, const char* two )
+{
+	return (0 == strcmp( one, two ));
+}
+```
+
+#### Function: stringHasPrefix
+
+```
+int stringHasPrefix( const char* string, const char* prefix )
+{
+    int len = strlen( prefix )
+
+	return (0 == strcmp( string, prefix, len ));
 }
 ```

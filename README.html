@@ -46,24 +46,26 @@
            |-- readline
            |-- processPreformatted</code></pre>
 <p>An summary of these functions is given, then their implementation is discussed in detail.</p>
-<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">int</span>                 main( <span class="dt">int</span> argc, <span class="dt">char</span>** argv );</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">int</span> main( <span class="dt">int</span> argc, <span class="dt">char</span>** argv );</code></pre></div>
 <p>The 'main' function is responsible for checking whether appropriate arguments have been passed and: if so, calling tryToProcess on each file and; if not, calling the 'usage' function.</p>
-<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c">bool  argumentsContains( <span class="dt">int</span> argc, <span class="dt">char</span>** argv, <span class="dt">char</span>* flag );</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c">bool argumentsContains( <span class="dt">int</span> argc, <span class="dt">char</span>** argv, <span class="dt">char</span>* flag );</code></pre></div>
 <p>The 'argumentsContains' function check each of the arguments passed to main to see if it matches the specified flag.</p>
 <div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">char</span>* argumentsGetValue( <span class="dt">int</span> n, <span class="dt">char</span>** files, <span class="dt">char</span>* flag )</code></pre></div>
 <p>The 'argumentsGetValue' function retrieves (if appropriate) the value following a specific flag.</p>
-<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">int</span>                usage();</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">int</span> usage();</code></pre></div>
 <p>The 'usage' function simply prints out the usage string and always returns -1.</p>
-<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">char</span>*    generatePattern( <span class="dt">const</span> <span class="dt">char</span>* pattern );</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">char</span>* generatePattern( <span class="dt">const</span> <span class="dt">char</span>* pattern );</code></pre></div>
 <p>The 'generate' pattern function is used to generate the line delimiter to be searched for in the input files.</p>
-<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">void</span>        tryToProcess( <span class="dt">char</span>* file, <span class="dt">const</span> <span class="dt">char</span>* line_pattern );</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">void</span> tryToProcess( <span class="dt">char</span>* file, <span class="dt">const</span> <span class="dt">char</span>* line_pattern );</code></pre></div>
 <p>The 'tryToProcess' function tries to open the passed file, and if successful passes the opened stream to 'process' along with the passed line pattern.</p>
-<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">void</span>             process( FILE*, <span class="dt">const</span> <span class="dt">char</span>* );</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">void</span> process( FILE*, <span class="dt">const</span> <span class="dt">char</span>* );</code></pre></div>
 <p>The 'process' function reads each line of the passed stream, and if the passed line pattern is found outputs any further lines to standard output until an end delimiter is encountered.</p>
-<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">char</span>*           readline( FILE* );</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">char</span>* readline( FILE* );</code></pre></div>
 <p>The 'readline' function reimplements the UNIX readline function for portability.</p>
 <div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">void</span> processPreformatted( <span class="dt">char</span>* line, FILE*, <span class="dt">const</span> <span class="dt">char</span>* pattern );</code></pre></div>
-<h3 id="low-level">Low-level</h3>
+<p>The 'processPreformatted' function is used to strip out lines starting with specific keywords such as 'DELIMITER', or 'DROP', which (in the case of SQL) it is often desirous to remove for installation scripts.</p>
+<h3 id="low-level-implemention-function-descriptions">Low-level implemention function descriptions</h3>
+<h4 id="function-main">Function: main</h4>
 <pre><code>int main( int argc, char** files )
 {
     STRIP     = argumentsContains( argc, files, &quot;-s&quot; ) ? 1 : 0;
@@ -95,6 +97,7 @@
 
     return 0;
 }</code></pre>
+<h4 id="function-argumentcontains">Function: argumentContains</h4>
 <pre><code>int argumentsContains( int n, char** files, char* flag )
 {
     int b = 0;
@@ -110,6 +113,7 @@
     }
     return b;
 }</code></pre>
+<h4 id="function-argumentgetvalue">Function: argumentGetValue</h4>
 <pre><code>char* argumentsGetValue( int n, char** files, char* flag )
 {
     char* ret = NULL;
@@ -126,15 +130,13 @@
     }
     return ret;
 }</code></pre>
-<pre><code>int stringEquals( const char* one, const char* two )
-{
-    return (0 == strcmp( one, two ));
-}</code></pre>
+<h4 id="function-usage">Function: usage</h4>
 <pre><code>int usage()
 {
     fprintf( stderr, &quot;Usage:\n\textract [-s] -p &lt;pattern&gt; &lt;file&gt; [more files] [ &gt; output file ]\n&quot; );
     return -1;
 }</code></pre>
+<h4 id="function-generatepattern">Function: generatePattern</h4>
 <pre><code>char* generatePattern( const char* pat )
 {
     int len = strlen( pat );
@@ -145,6 +147,7 @@
     tmp = stpcpy( tmp, &quot;~&quot; );
     return pattern;
 }</code></pre>
+<h4 id="function-trytoprocess">Function: tryToProcess</h4>
 <pre><code>void tryToProcess( char* file, const char* pattern )
 {
     FILE* stream;
@@ -155,6 +158,7 @@
         fclose( stream );
     }
 }</code></pre>
+<h4 id="function-process">Function: process</h4>
 <pre><code>void process( FILE* stream, const char* pattern )
 {
     char* line;
@@ -176,6 +180,7 @@
         }
     } while ( line );
 }</code></pre>
+<h4 id="function-processpreformatted">Function: processPreformatted</h4>
 <pre><code>void processPreformatted( char* line, FILE* stream, const char* pattern )
 {
     int   loop = 1;
@@ -240,6 +245,7 @@
     }
     while ( loop );
 }</code></pre>
+<h4 id="function-readline">Function: readline</h4>
 <pre><code>char* readline( FILE* stream )
 {
     int   n = 0;
@@ -273,4 +279,16 @@
         free( line );
         return NULL;
     }
+}</code></pre>
+<h4 id="function-stringequals">Function: stringEquals</h4>
+<pre><code>int stringEquals( const char* one, const char* two )
+{
+    return (0 == strcmp( one, two ));
+}</code></pre>
+<h4 id="function-stringhasprefix">Function: stringHasPrefix</h4>
+<pre><code>int stringHasPrefix( const char* string, const char* prefix )
+{
+    int len = strlen( prefix )
+
+    return (0 == strcmp( string, prefix, len ));
 }</code></pre>
