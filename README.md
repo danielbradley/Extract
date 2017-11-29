@@ -467,7 +467,7 @@ char* readline( FILE* stream )
     int  n     = 0;
     int  sz    = 1024;
     char ch[2] = { 0, 0 };
-    char* line = calloc( sz, sizeof( char ) );
+    char* line = calloc( sz + 1, sizeof( char ) );
 
     int read;
     do
