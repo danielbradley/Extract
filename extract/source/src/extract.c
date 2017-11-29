@@ -118,11 +118,6 @@ char* argumentsGetValue( int n, char** files, char* flag )
     return ret;
 }
 
-int stringEquals( const char* one, const char* two )
-{
-    return (0 == strcmp( one, two ));
-}
-
 int usage()
 {
     fprintf( stderr, "Usage:\n\textract [-s] -p <pattern> <file> [more files] [ > output file ]\n" );
@@ -276,3 +271,14 @@ void tryToProcess( char* file, const char* pattern )
                 }
             }
 
+int stringEquals( const char* one, const char* two )
+{
+    return (0 == strcmp( one, two ));
+}
+
+int stringHasPrefix( const char* string, const char* prefix )
+{
+    int len = strlen( prefix )
+
+    return (0 == strcmp( string, prefix, len ));
+}
