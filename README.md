@@ -351,7 +351,7 @@ void tryToProcess( char* file, const char* pattern )
 ```main.c
 void process( FILE* stream, const char* pattern )
 {
-    char* line_delimiter = "";
+    char* line_delimiter = NULL;
     char* line;
 
     do
