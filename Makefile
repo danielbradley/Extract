@@ -11,6 +11,7 @@ quasi:
 bin: quasi
 	mkdir -p extract/bin/$(arch)
 	gcc -o extract/bin/$(arch)/extract _gen/main.c
+	gcc -o extract/bin/$(arch)/extract-debug _gen/main.c -g
 
 pandoc:
 	pandoc -o _gen/README.html README.md

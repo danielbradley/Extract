@@ -29,7 +29,7 @@ void process( FILE*, const char* pattern );
 
 char* readline( FILE* );
 
-void processPreformatted( char* line, FILE*, const char* pattern );
+void processPreformatted( const char* line, FILE*, const char* pattern );
 
 int stringEquals( const char* one, const char* two );
 
@@ -177,7 +177,7 @@ void process( FILE* stream, const char* pattern )
     free( line_delimiter );
 }
 
-void processPreformatted( char* line, FILE* stream, const char* line_delimiter )
+void processPreformatted( const char* line, FILE* stream, const char* line_delimiter )
 {
     int   loop = 1;
     char* pre;
@@ -247,37 +247,46 @@ void processPreformatted( char* line, FILE* stream, const char* line_delimiter )
 
 char* readline( FILE* stream )
 {
-    int   n = 0;
-    char* line = calloc( 1024, sizeof(char) );
-    char* ptr  = calloc( 10,  sizeof(char) );
+    int  n     = 0;
+    int  sz    = 1024;
+    char ch[2] = { 0, 0 };
+    char* line = calloc( sz, sizeof( char ) );
+
     int read;
     do
     {
-        read = fread( ptr, sizeof(char), 1, stream );
+        read = fread( ch, sizeof(char), 1, stream );
         if ( read )
         {
-            switch( *ptr )
+            switch ( *ch )
             {
             case '\n':
-                line[n++] = *ptr;
-                read = 0;
+                line[n++] = *ch;
+                line[n]   = '\0';
+                read      = 0;
                 break;
             default:
-                line[n++] = *ptr;
+                line[n++] = *ch;
+                line[n]   = '\0';
+            }
+
+            if ( n == sz )
+            {
+                sz  *= 2;
+                line = realloc( line, sz );
             }
         }
-    } while ( 0 != read );
-    free( ptr );
-
-    if ( n )
-    {
-        return line;
+        
     }
-    else
+    while ( 0 != read );
+
+    if ( 0 == n )
     {
         free( line );
-        return NULL;
+        line = NULL;
     }
+
+    return line;
 }
 
 int stringEquals( const char* one, const char* two )
