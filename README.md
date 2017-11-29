@@ -72,8 +72,9 @@ Source code extracted from this file may be viewed under the '_gen' directory.
 #include <stdlib.h>
 ```
 
-This header is included to provide access to the 'calloc' and 'free' functions:
+This header is included to provide access to the 'calloc', 'realloc', and 'free' functions:
 'calloc' is used to allocate memory that has been zeroed,
+'realloc' is used in the 'readline' function to increase the size of the line buffer,
 while 'free' is used to deallocate allocated memory.
 
 ```main.c
@@ -81,7 +82,7 @@ while 'free' is used to deallocate allocated memory.
 ```
 
 This header is included to provide access to the 'fopen', 'fclose', and 'fprintf' functions:
-'fopen' is used to open the files indicated by the command-line arguments,
+'fopen' is used to open the files indicated by the command-line arguments, as well as open '/dev/null',
 'fclose' is used to close those files, and
 'fprintf' is used to write pre-formatted text blocks to the standard output stream.
 
@@ -90,11 +91,11 @@ This header is included to provide access to the 'fopen', 'fclose', and 'fprintf
 #include <string.h>
 ```
 
-This header is included to provide access to the 'strdup', 'strcmp', 'strncmp', 'strlen', 'strpcpy', and functions:
+This header is included to provide access to the 'strdup', 'strcmp', 'strncmp', 'strlen', and 'stpcpy' functions:
 'strdup' is used to duplicate the passed string,
 'strcmp' and 'strncmp' are used to compare whether two strings are equal ('strcmp'), or whether one is a prefix of the other ('strncmp').
 'strlen' is used to find the length of a string, and
-'strpcpy' is used to ???
+'stpcpy' is used to concatenate a prefix, pattern, and suffix to create the appropriate line delimiter for either Markdown or MaxText.
 
 ### Defined types and values
 
@@ -104,6 +105,15 @@ The 'int' type is typecast to a 'bool' for readability.
 typedef int bool;
 ```
 
+### Definition of booleans
+
+Also for readability, the booleans TRUE and FALSE are defined.
+
+```main.c
+#define FALSE 0;
+#define TRUE 1;
+```
+
 ### Global state
 
 The implementation has two global variables:
@@ -111,8 +121,8 @@ if 'DEBUG' is set to 'TRUE', extra debugging lines are output to the standard er
 if 'STRIP' is set to 'TRUE', extract will strip lines beginning with 'DELIMITER' from the ouput.
 
 ```main.c
-static bool DEBUG = 0; // FALSE;
-static bool STRIP = 0; // FALSE;
+static bool DEBUG = FALSE;
+static bool STRIP = FALSE;
 ```
 
 ### High-level function structure
@@ -163,21 +173,21 @@ The 'usage' function simply prints out the usage string and always returns -1.
 char* generateDelimiter( const char* prefix, const char* pattern, const char* suffix );
 ```
 
-The 'generate' pattern function is used to generate the line delimiter to be searched for in the input files.
+The 'generateDelimiter' function is used to generate the line delimiter to be searched for in the input files.
 
 ```main.c
 void tryToProcess( char* file, const char* pattern );
 ```
 
 The 'tryToProcess' function tries to open the passed file, and if successful passes the opened stream to
-'process' along with the passed line pattern.
+'process' along with the passed line pattern delimiter.
 
 ```main.c
 void process( FILE*, const char* pattern );
 ```
 
 The 'process' function reads each line of the passed stream,
-and if the passed line pattern is found outputs any further lines to standard output
+and if the passed line pattern delimiter is found outputs any further lines to standard output
 until an end delimiter is encountered.
 
 ```main.c
@@ -190,7 +200,7 @@ The 'readline' function reimplements the UNIX readline function for portability.
 void processPreformatted( const char* line, FILE*, const char* pattern );
 ```
 
-The 'processPreformatted' function is used to strip out lines starting with specific keywords such as 'DELIMITER', or 'DROP',
+If the strip ('-s') flag has been used, the 'processPreformatted' function is used to strip out lines starting with specific keywords such as 'DELIMITER', or 'DROP',
 which (in the case of SQL) it is often desirous to remove for installation scripts.
 
 ```main.c
@@ -216,7 +226,7 @@ If a pattern has not been passed, or the number of arguments passed are less tha
 the usage() function is called and exit is called.
 
 Otherwise, each file passed in the arguments is passed to the 'tryToProcess' function
-along with the *line delimiter*.
+along with the specified pattern.
 
 ```main.c
 int main( int argc, char** argv )

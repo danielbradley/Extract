@@ -10,8 +10,11 @@
 
 typedef int bool;
 
-static bool DEBUG = 0; // FALSE;
-static bool STRIP = 0; // FALSE;
+#define FALSE 0;
+#define TRUE 1;
+
+static bool DEBUG = FALSE;
+static bool STRIP = FALSE;
 
 int main( int argc, char** argv );
 
