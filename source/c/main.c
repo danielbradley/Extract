@@ -294,7 +294,10 @@ char* readline( FILE* stream )
 
 int stringEquals( const char* one, const char* two )
 {
-    return (0 == strcmp( one, two ));
+    int l1 = strlen( one );
+    int l2 = strlen( two );
+
+    return (l1 == l2) && (0 == strncmp( one, two, l1 ));
 }
 
 int stringHasPrefix( const char* string, const char* prefix )

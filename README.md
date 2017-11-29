@@ -4,7 +4,7 @@
 ## Introduction
 
 'Extract' is a command line tool for extracting SQL and other code
-from marked up text files that are able to represent pre-formated text sections.
+from marked up text files that are able to represent pre-formatted text sections.
 
 Currently, two such text formats are explicitly supported - Markdown and MaxText.
 MaxText is a plain text markup system that is similar conceptually to Markdown.
@@ -68,7 +68,7 @@ This implementation now uses the "quasi-literate programming" style as described
 To facilitate this implementation that now supports Markdown,
 the tool 'quasi' was also extended to support Markdown.
 
-Source code extracted from this file may be viewed under the '_gen' directory.
+Source code extracted from this file may be viewed under the 'source/c' directory.
 
 ```!main.c
 /*
@@ -144,8 +144,8 @@ static bool STRIP = FALSE;
 
 ```
 main
- |-- argumentsContains
- |-- argumentsGetValue
+ |-- argumentsContains -- stringEquals
+ |-- argumentsGetValue -- stringEquals
  |-- usage
  |-- generateDelimiter
  |-- tryToProcess
@@ -538,7 +538,10 @@ char* readline( FILE* stream )
 ```main.c
 int stringEquals( const char* one, const char* two )
 {
-    return (0 == strcmp( one, two ));
+    int l1 = strlen( one );
+    int l2 = strlen( two );
+
+    return (l1 == l2) && (0 == strncmp( one, two, l1 ));
 }
 ```
 
