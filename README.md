@@ -21,12 +21,10 @@ the following command line matches pre-formatted sections in the specified files
 extract -p "tables" source/mt/file.txt > sql/tables.sql
 ```
 
-When using Markdown, such a pre-formatted block would be delimited as such:
+When using Markdown, such a pre-formatted block would begin with a line such as:
 
 ```
  ```tables
- Pre-formatted text here
- ```
 ```
 
 Unfortunately, it seems like there is no pattern that can be used with both Pandoc and Github to indicate both a pattern and a file type.
