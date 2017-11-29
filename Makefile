@@ -1,25 +1,32 @@
 arch := $(shell uname)
 
-all: bin
+all: quasi cc md
+
+quasi:
+	quasi -f source/c source/mt/*.txt
+
+cc:
+	mkdir -p bin/$(arch)
+	gcc    -o bin/$(arch)/extract       source/c/main.c
+	gcc -g -o bin/$(arch)/extract-debug source/c/main.c
+
+md:
+	cat source/mt/*.txt | sed 's|^\.\.\.|####|g' \
+                            | sed 's|^\.\.|###|g'    \
+                            | sed 's|^\.|##|g'       \
+                            | sed 's|^--||g'         \
+                            | sed 's|^-|#|g'         \
+                            | sed 's|^\~!|```!|g'    \
+                            | sed 's|^\~|```|g'      \
+                            | sed 's|\~$$||g'        \
+                            | sed 's|"https://www.quasi-literateprogramming.org"|[https://www.quasi-literateprogramming.org]|g' \
+                            > README.md
 
 pull:
 	git pull
 
-quasi:
-	quasi -f _gen README.md
-
-bin: quasi
-	mkdir -p extract/bin/$(arch)
-	gcc -o extract/bin/$(arch)/extract _gen/main.c
-	gcc -o extract/bin/$(arch)/extract-debug _gen/main.c -g
-
 pandoc:
-	pandoc -o _gen/README.html README.md
+	pandoc -o doc/README.html README.md
 
 push:
-	git add .
-	git commit -m "Changes."
 	git push
-
-clean:
-	rm -rf _gen

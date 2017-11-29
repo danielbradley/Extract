@@ -1,0 +1,43 @@
+
+. MaxText versus Markdown
+
+Markdown uses a triplet of back-ticks ("```") in the left-most column to indicate the start and end of a pre-formatted text section, while Maxtext uses a tilde ('~') character.
+While, technically, both text systems ignore any remaining text on the line,
+some systems such as Github, allow remaining text to hint at a programming language for syntax highlighting,
+and others such as Pandoc may not recognise the delimiter if there are spaces in any remaining text.
+
+'Extract' uses these superfluous characters to indicate a pattern that will be matched against a pattern passed
+as a common-line argument.
+For example,
+when run,
+the following command line matches pre-formatted sections in the specified files that contain the pattern 'tables'.
+
+~
+extract -p "tables" source/mt/file.txt > sql/tables.sql
+~
+
+When using Markdown, such a pre-formatted block would begin with a line such as:
+
+~
+ ```tables
+~
+
+Unfortunately, it seems like there is no pattern that can be used with both Pandoc and Github to indicate both a pattern and a file type.
+For example, Github will accept a delimiter such as that below and appropriately mark it up as SQL:
+
+~
+ ```tables sql
+~
+
+However, Pandoc does not seem to accept such a delimiter, but rather will accept the following,
+which is not accepted by Github:
+
+~
+ ```tables.sql
+~
+
+Therefore, if you will only be using Github you can use a pattern that has a space then 'sql',
+however, if you will be using Pandoc, use a pattern with no spaces in it.
+
+Hopefully, in the future one of these two systems will be modified so that they can support similar patterns.
+

@@ -1,0 +1,40 @@
+/*
+ *	Default MaxText Style
+ */
+
+BODY.maxtext { color:#444; }BODY.maxtext DIV.document {}BODY.maxtext { width:718px; width:550px; margin-left:auto; margin-right:auto; }BODY.maxtext { padding: 25; border: none; }BODY.maxtext H1,H2,H3,H4,H5,H6,P,PRE,TD,BLOCKQUOTE,UL,OL,SPAN,B,A { font-size:small; font-weight:normal; font-style:normal; font-family:helvetica; }BODY.maxtext P,PRE,TD,BLOCKQUOTE,UL,OL,SPAN,B,A { margin-bottom:10px; }BODY.maxtext H1,H2,H3,H4,H5,H6                  { margin-bottom:10px; }BODY.maxtext .subtitle { font-size: medium; text-align: center; }BODY.maxtext .top { margin-top:10px; }BODY.maxtext .H1 { font-size: xx-large; font-weight:bold; margin-top:10px; margin-bottom:10px; text-align: center; }BODY.maxtext .H2 { font-size: larger;   font-weight:bold; margin-top:36px;                     font-variant: small-caps; }BODY.maxtext .H3 { font-size: medium;   font-weight:bold; margin-top:32px; }BODY.maxtext .H4 { font-size: small;    font-weight:bold; margin-top:26px; }BODY.maxtext .H5 { font-size: smaller;  font-weight:bold; margin-top:26px; font-style: normal; font-variant: small-caps; }BODY.maxtext .H6 { font-size: smaller;                                     font-style:italic; }BODY.maxtext UL  { margin-left: 30px; text-align: justify; list-style-position:outside; }BODY.maxtext OL  { margin-left: 30px; text-align: justify; list-style-position:outside; }BODY.maxtext LI   { padding-left: 0px; }BODY.maxtext P   { text-align: justify; line-height: 20px; }BODY.maxtext P.paragraph { font-family: helvetica; font-size: small; margin-left: 0; margin-right: 0; text-align: justify; }BODY.maxtext P.part { font-size: x-large; font-weight: bold; margin-top:36; border-bottom: solid 1px black; padding-bottom:8px; }BODY.maxtext B  { font-weight:bold; }BODY.maxtext A  { text-decoration: none; }BODY.maxtext A:visited { text-decoration: none; }BODY.maxtext HR { border:none; border-top:solid 1px #eee; }BODY.maxtext P.figure{	margin: 20px 0 20px 0;	text-align:center;}BODY.maxtext BLOCKQUOTE{	margin: 20px 0 20px 0;	padding: 10px 0px 10px 20px;	font-family: times;	font-size: 8pt;	/* background: #eee; */	border-left: solid 1px #ddd;}BODY.maxtext PRE{	background: #fff;	margin: 20px 0 20px 0;	padding: 10px 20px 10px 20px;	color: #222;	font-family: menlo;	font-size:10px;	line-height: 150%;	text-align: justify;}BODY.maxtext PRE{background-image: linear-gradient(left , rgb(247,247,247) 11%, rgb(255,255,255) 60%);background-image: -o-linear-gradient(left , rgb(247,247,247) 11%, rgb(255,255,255) 60%);background-image: -moz-linear-gradient(left , rgb(247,247,247) 11%, rgb(255,255,255) 60%);background-image: -webkit-linear-gradient(left , rgb(247,247,247) 11%, rgb(255,255,255) 60%);background-image: -ms-linear-gradient(left , rgb(247,247,247) 11%, rgb(255,255,255) 60%);background-image: -webkit-gradient(	linear,	left top,	right top,	color-stop(0.11, rgb(247,247,247)),	color-stop(0.9, rgb(255,255,255)));}BODY.maxtext P.marginnote{	width: 100;	float: right;}BODY.maxtext TD { padding: 5px; }BODY.maxtext TD.bibkey { text-align:right; padding-right: 5px; }BODY.maxtext TD.reference { }
+
+*
+{
+	font-family:helvetica;
+}
+
+HEADER#title
+{
+	font-size:30px;
+	font-weight:bold;
+}
+
+HEADER#subtitle
+{
+	font-size:14px;
+	text-transform:uppercase;
+}
+
+BODY.maxtext H1
+{
+	margin-top:60px;
+	font-size:30px;
+	font-weight:300;
+}
+
+BODY.maxtext H2
+{
+	font-size:20px;
+}
+
+BODY.maxtext H3
+{
+	font-size:16px;
+	font-weight:bold;
+}

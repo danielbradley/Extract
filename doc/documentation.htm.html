@@ -1,148 +1,149 @@
-# Extract
- Daniel Bradley - daniel@crossadaptive.com
-
-## Introduction
-
+<html>
+<head>
+<meta name='viewport' content='width=device-width'>
+<style type='text/css'>
+/* *	Default MaxText Style */BODY.maxtext { color:#444; }BODY.maxtext DIV.document {}BODY.maxtext { width:718px; width:550px; margin-left:auto; margin-right:auto; }BODY.maxtext { padding: 25; border: none; }BODY.maxtext H1,H2,H3,H4,H5,H6,P,PRE,TD,BLOCKQUOTE,UL,OL,SPAN,B,A { font-size:small; font-weight:normal; font-style:normal; font-family:helvetica; }BODY.maxtext P,PRE,TD,BLOCKQUOTE,UL,OL,SPAN,B,A { margin-bottom:10px; }BODY.maxtext H1,H2,H3,H4,H5,H6                  { margin-bottom:10px; }BODY.maxtext .subtitle { font-size: medium; text-align: center; }BODY.maxtext .top { margin-top:10px; }BODY.maxtext .H1 { font-size: xx-large; font-weight:bold; margin-top:10px; margin-bottom:10px; text-align: center; }BODY.maxtext .H2 { font-size: larger;   font-weight:bold; margin-top:36px;                     font-variant: small-caps; }BODY.maxtext .H3 { font-size: medium;   font-weight:bold; margin-top:32px; }BODY.maxtext .H4 { font-size: small;    font-weight:bold; margin-top:26px; }BODY.maxtext .H5 { font-size: smaller;  font-weight:bold; margin-top:26px; font-style: normal; font-variant: small-caps; }BODY.maxtext .H6 { font-size: smaller;                                     font-style:italic; }BODY.maxtext UL  { margin-left: 30px; text-align: justify; list-style-position:outside; }BODY.maxtext OL  { margin-left: 30px; text-align: justify; list-style-position:outside; }BODY.maxtext LI   { padding-left: 0px; }BODY.maxtext P   { text-align: justify; line-height: 20px; }BODY.maxtext P.paragraph { font-family: helvetica; font-size: small; margin-left: 0; margin-right: 0; text-align: justify; }BODY.maxtext P.part { font-size: x-large; font-weight: bold; margin-top:36; border-bottom: solid 1px black; padding-bottom:8px; }BODY.maxtext B  { font-weight:bold; }BODY.maxtext A  { text-decoration: none; }BODY.maxtext A:visited { text-decoration: none; }BODY.maxtext HR { border:none; border-top:solid 1px #eee; }BODY.maxtext P.figure{	margin: 20px 0 20px 0;	text-align:center;}BODY.maxtext BLOCKQUOTE{	margin: 20px 0 20px 0;	padding: 10px 0px 10px 20px;	font-family: times;	font-size: 8pt;	/* background: #eee; */	border-left: solid 1px #ddd;}BODY.maxtext PRE{	background: #fff;	margin: 20px 0 20px 0;	padding: 10px 20px 10px 20px;	color: #222;	font-family: menlo;	font-size:10px;	line-height: 150%;	text-align: justify;}BODY.maxtext PRE{background-image: linear-gradient(left , rgb(247,247,247) 11%, rgb(255,255,255) 60%);background-image: -o-linear-gradient(left , rgb(247,247,247) 11%, rgb(255,255,255) 60%);background-image: -moz-linear-gradient(left , rgb(247,247,247) 11%, rgb(255,255,255) 60%);background-image: -webkit-linear-gradient(left , rgb(247,247,247) 11%, rgb(255,255,255) 60%);background-image: -ms-linear-gradient(left , rgb(247,247,247) 11%, rgb(255,255,255) 60%);background-image: -webkit-gradient(	linear,	left top,	right top,	color-stop(0.11, rgb(247,247,247)),	color-stop(0.9, rgb(255,255,255)));}BODY.maxtext P.marginnote{	width: 100;	float: right;}BODY.maxtext TD { padding: 5px; }BODY.maxtext TD.bibkey { text-align:right; padding-right: 5px; }BODY.maxtext TD.reference { }*{	font-family:helvetica;}HEADER#title{	font-size:30px;	font-weight:bold;}HEADER#subtitle{	font-size:14px;	text-transform:uppercase;}BODY.maxtext H1{	margin-top:60px;	font-size:30px;	font-weight:300;}BODY.maxtext H2{	font-size:20px;}BODY.maxtext H3{	font-size:16px;	font-weight:bold;}
+</style>
+</head>
+<body class='maxtext'>
+<header id='title'> Extract</header>
+<header id='subtitle'> Daniel Bradley - daniel@crossadaptive.com</header>
+<h1>Introduction</h1>
+<p class='paragraph'>
 'Extract' is a command line tool for extracting SQL and other code
 from marked up text files that are able to represent pre-formated text sections.
-
+</p>
+<p class='paragraph'>
 Currently, two such text formats are explicitly supported - Markdown and MaxText.
 MaxText is a plain text markup system that is similar conceptually to Markdown.
-
-
-
-## Quick start
-
-1) Download Quasi from: here
-2) Compile by typing this
-
-
-## MaxText versus Markdown
-
+</p>
+<h1>Quick start</h1>
+<ol>
+<li>Download Quasi from: here
+</li><li>Compile by typing this
+</li></ol>
+<h1>MaxText versus Markdown</h1>
+<p class='paragraph'>
 Markdown uses a triplet of back-ticks ("```") in the left-most column to indicate the start and end of a pre-formatted text section, while Maxtext uses a tilde ('~') character.
 While, technically, both text systems ignore any remaining text on the line,
 some systems such as Github, allow remaining text to hint at a programming language for syntax highlighting,
 and others such as Pandoc may not recognise the delimiter if there are spaces in any remaining text.
-
+</p>
+<p class='paragraph'>
 'Extract' uses these superfluous characters to indicate a pattern that will be matched against a pattern passed
 as a common-line argument.
 For example,
 when run,
 the following command line matches pre-formatted sections in the specified files that contain the pattern 'tables'.
-
-```
-extract -p "tables" source/mt/file.txt > sql/tables.sql
-```
-
+</p>
+<pre>
+extract -p "tables" source/mt/file.txt &gt; sql/tables.sql
+</pre>
+<p class='paragraph'>
 When using Markdown, such a pre-formatted block would begin with a line such as:
-
-```
+</p>
+<pre>
  ```tables
-```
-
+</pre>
+<p class='paragraph'>
 Unfortunately, it seems like there is no pattern that can be used with both Pandoc and Github to indicate both a pattern and a file type.
 For example, Github will accept a delimiter such as that below and appropriately mark it up as SQL:
-
-```
+</p>
+<pre>
  ```tables sql
-```
-
+</pre>
+<p class='paragraph'>
 However, Pandoc does not seem to accept such a delimiter, but rather will accept the following,
 which is not accepted by Github:
-
-```
+</p>
+<pre>
  ```tables.sql
-```
-
+</pre>
+<p class='paragraph'>
 Therefore, if you will only be using Github you can use a pattern that has a space then 'sql',
 however, if you will be using Pandoc, use a pattern with no spaces in it.
-
+</p>
+<p class='paragraph'>
 Hopefully, in the future one of these two systems will be modified so that they can support similar patterns.
-
-
-## Implementation
-
+</p>
+<h1>Implementation</h1>
+<p class='paragraph'>
 The following sections describe the current implementation of 'Extract'.
 This implementation now uses the "quasi-literate programming" style as described at:
-[https://www.quasi-literateprogramming.org].
+ "https:<i></i>www.quasi-literateprogramming.org".
 To facilitate this implementation that now supports Markdown,
 the tool 'quasi' was also extended to support Markdown.
-
+</p>
+<p class='paragraph'>
 Source code extracted from this file may be viewed under the '_gen' directory.
-
-```!main.c
+</p>
+<pre>
 /*
  *  !!! This document has been auto-generated using quasi !!!
  */
-```
-
-### Dependencies
-
+</pre>
+<h2>Dependencies</h2>
+<p class='paragraph'>
 'Extract' depends on functions declared in the following header files.
-
-
-```main.c
-#include <stdlib.h>
-```
-
+</p>
+<pre>
+#include &lt;stdlib.h&gt;
+</pre>
+<p class='paragraph'>
 This header is included to provide access to the 'calloc', 'realloc', and 'free' functions:
 'calloc' is used to allocate memory that has been zeroed,
 'realloc' is used in the 'readline' function to increase the size of the line buffer,
 while 'free' is used to deallocate allocated memory.
-
-```main.c
-#include <stdio.h>
-```
-
+</p>
+<pre>
+#include &lt;stdio.h&gt;
+</pre>
+<p class='paragraph'>
 This header is included to provide access to the 'fopen', 'fclose', and 'fprintf' functions:
 'fopen' is used to open the files indicated by the command-line arguments, as well as open '/dev/null',
 'fclose' is used to close those files, and
 'fprintf' is used to write pre-formatted text blocks to the standard output stream.
-
-
-```main.c
-#include <string.h>
-```
-
+</p>
+<pre>
+#include &lt;string.h&gt;
+</pre>
+<p class='paragraph'>
 This header is included to provide access to the 'strdup', 'strcmp', 'strncmp', 'strlen', and 'stpcpy' functions:
 'strdup' is used to duplicate the passed string,
 'strcmp' and 'strncmp' are used to compare whether two strings are equal ('strcmp'), or whether one is a prefix of the other ('strncmp').
 'strlen' is used to find the length of a string, and
 'stpcpy' is used to concatenate a prefix, pattern, and suffix to create the appropriate line delimiter for either Markdown or MaxText.
-
-### Defined types and values
-
+</p>
+<h2>Defined types and values</h2>
+<p class='paragraph'>
 The 'int' type is typecast to a 'bool' for readability.
-
-```main.c
+</p>
+<pre>
 typedef int bool;
-```
-
-### Definition of booleans
-
+</pre>
+<h2>Definition of booleans</h2>
+<p class='paragraph'>
 Also for readability, the booleans TRUE and FALSE are defined.
-
-```main.c
+</p>
+<pre>
 #define FALSE 0;
 #define TRUE 1;
-```
-
-### Global state
-
+</pre>
+<h2>Global state</h2>
+<p class='paragraph'>
 The implementation has two global variables:
 if 'DEBUG' is set to 'TRUE', extra debugging lines are output to the standard error stream.
 if 'STRIP' is set to 'TRUE', extract will strip lines beginning with 'DELIMITER' from the ouput.
-
-```main.c
+</p>
+<pre>
 static bool DEBUG = FALSE;
 static bool STRIP = FALSE;
-```
-
-### High-level function structure
-
+</pre>
+<h2>High-level function structure</h2>
+<p class='paragraph'>
 'Extract' has a simple call-graph, which is shown below:
-
-```
+</p>
+<pre>
 main
  |-- argumentsContains
  |-- argumentsGetValue
@@ -152,96 +153,97 @@ main
       |-- process
            |-- readline
            |-- processPreformatted
-```
-
+</pre>
+<p class='paragraph'>
 A summary of these functions is given, then their implementation is discussed in detail.
-
-```main.c
+</p>
+<pre>
 int main( int argc, char** argv );
-```
-
+</pre>
+<p class='paragraph'>
 The 'main' function is responsible for checking whether appropriate arguments have been passed and:
 if so, calling tryToProcess on each file and;
 if not, calling the 'usage' function.
-
-```main.c
+</p>
+<pre>
 bool argumentsContains( int argc, char** argv, char* flag );
-```
-
+</pre>
+<p class='paragraph'>
 The 'argumentsContains' function check each of the arguments passed to main to see if it matches the specified flag.
-
-```main.c
+</p>
+<pre>
 char* argumentsGetValue( int n, char** files, char* flag );
-```
-
+</pre>
+<p class='paragraph'>
 The 'argumentsGetValue' function retrieves (if appropriate) the value following a specific flag.
-
-```main.c
+</p>
+<pre>
 int usage();
-```
-
+</pre>
+<p class='paragraph'>
 The 'usage' function simply prints out the usage string and always returns -1.
-
-```main.c
+</p>
+<pre>
 char* generateDelimiter( const char* prefix, const char* pattern, const char* suffix );
-```
-
+</pre>
+<p class='paragraph'>
 The 'generateDelimiter' function is used to generate the line delimiter to be searched for in the input files.
-
-```main.c
+</p>
+<pre>
 void tryToProcess( char* file, const char* pattern );
-```
-
+</pre>
+<p class='paragraph'>
 The 'tryToProcess' function tries to open the passed file, and if successful passes the opened stream to
 'process' along with the passed line pattern delimiter.
-
-```main.c
+</p>
+<pre>
 void process( FILE*, const char* pattern );
-```
-
+</pre>
+<p class='paragraph'>
 The 'process' function reads each line of the passed stream,
 and if the passed line pattern delimiter is found outputs any further lines to standard output
 until an end delimiter is encountered.
-
-```main.c
+</p>
+<pre>
 char* readline( FILE* );
-```
-
+</pre>
+<p class='paragraph'>
 The 'readline' function reimplements the UNIX readline function for portability.
-
-```main.c
+</p>
+<pre>
 void processPreformatted( const char* line, FILE*, const char* pattern );
-```
-
+</pre>
+<p class='paragraph'>
 If the strip ('-s') flag has been used, the 'processPreformatted' function is used to strip out lines starting with specific keywords such as 'DELIMITER', or 'DROP',
 which (in the case of SQL) it is often desirous to remove for installation scripts.
-
-```main.c
+</p>
+<pre>
 int stringEquals( const char* one, const char* two );
-```
-
+</pre>
+<p class='paragraph'>
 The 'stringEquals' function compares whether the two passed strings contain the same characters.
-
-```main.c
+</p>
+<pre>
 int stringHasPrefix( const char* string, const char* prefix );
-```
-
+</pre>
+<p class='paragraph'>
 The 'stringHasPrefix' function determins whether the passed string has the passed prefix.
-
-### Low-level implemention function descriptions
-
-#### Function: main
-
+</p>
+<h2>Low-level implemention function descriptions</h2>
+<h3>Function: main</h3>
+<p class='paragraph'>
 The main function first processes the passed arguments to retrieve the pattern,
-and to determine whether the *strip* flag has been passed, e.g., ('-s').
-
+and to determine whether the <b>strip</b> flag has been passed, e.g., ('-s').
+</p>
+<p class='paragraph'>
 If a pattern has not been passed, or the number of arguments passed are less than expected,
 the usage() function is called and exit is called.
-
+</p>
+<p class='paragraph'>
 Otherwise, each file passed in the arguments is passed to the 'tryToProcess' function
 along with the specified pattern.
-
-```main.c
+</p>
+<pre>
 int main( int argc, char** argv )
 {
     char* pat = argumentsGetValue( argc, argv, "-p" );
@@ -255,7 +257,7 @@ int main( int argc, char** argv )
         exit( usage() );
     }
     else
-    if ( argc < expected_arguments )
+    if ( argc &lt; expected_arguments )
     {
         exit( usage() );
     }
@@ -268,7 +270,7 @@ int main( int argc, char** argv )
         //
 
         int i;
-        for ( i = 1; i < argc; i++ )
+        for ( i = 1; i &lt; argc; i++ )
         {
             if ( '-' != argv[i][0] )
             {
@@ -285,17 +287,15 @@ int main( int argc, char** argv )
 
     return 0;
 }
-```
-
-#### Function: argumentContains
-
-```main.c
+</pre>
+<h3>Function: argumentContains</h3>
+<pre>
 int argumentsContains( int n, char** files, char* flag )
 {
     int b = 0;
     int i;
 
-    for ( i=0; i < n; i++ )
+    for ( i=0; i &lt; n; i++ )
     {
         if ( stringEquals( flag, files[i] ) )
         {
@@ -305,42 +305,36 @@ int argumentsContains( int n, char** files, char* flag )
     }
     return b;
 }
-```
-
-#### Function: argumentGetValue
-
-```main.c
+</pre>
+<h3>Function: argumentGetValue</h3>
+<pre>
 char* argumentsGetValue( int n, char** files, char* flag )
 {
     char* ret = NULL;
     int i;
 
-    for ( i=0; i < n; i++ )
+    for ( i=0; i &lt; n; i++ )
     {
         if ( stringEquals( flag, files[i] ) )
         {
             i++;
-            if ( i < n) ret = strdup( files[i] );
+            if ( i &lt; n) ret = strdup( files[i] );
             i = n;
         }
     }
     return ret;
 }
-```
-
-#### Function: usage
-
-```main.c
+</pre>
+<h3>Function: usage</h3>
+<pre>
 int usage()
 {
-    fprintf( stderr, "Usage:\n\textract [-s] -p <pattern> <file> [more files] [ > output file ]\n" );
+    fprintf( stderr, "Usage:\n\textract [-s] -p &lt;pattern&gt; &lt;file&gt; [more files] [ &gt; output file ]\n" );
     return -1;
 }
-```
-
-#### Function: generateDelimiter
-
-```main.c
+</pre>
+<h3>Function: generateDelimiter</h3>
+<pre>
 char* generateDelimiter( const char* prefix, const char* pattern, const char* suffix )
 {
     char* delimiter = calloc( strlen( prefix ) + strlen( pattern ) + strlen( suffix ) + 1, sizeof(char) );
@@ -351,11 +345,9 @@ char* generateDelimiter( const char* prefix, const char* pattern, const char* su
 
     return delimiter;
 }
-```
-
-#### Function: tryToProcess
-
-```main.c
+</pre>
+<h3>Function: tryToProcess</h3>
+<pre>
 void tryToProcess( char* file, const char* pattern )
 {
     FILE* stream;
@@ -366,11 +358,9 @@ void tryToProcess( char* file, const char* pattern )
         fclose( stream );
     }
 }
-```
-
-#### Function: process
-
-```main.c
+</pre>
+<h3>Function: process</h3>
+<pre>
 void process( FILE* stream, const char* pattern )
 {
     char* line_delimiter = NULL;
@@ -390,7 +380,7 @@ void process( FILE* stream, const char* pattern )
                 processPreformatted( line, stream, line_delimiter );
                 break;
             case '`':
-                line_delimiter = generateDelimiter( "```", pattern, "" );
+                line_delimiter = generateDelimiter( "~", pattern, "" );
 
                 if ( ('`' == line[1]) && ('`' == line[2]) )
                 {
@@ -407,11 +397,9 @@ void process( FILE* stream, const char* pattern )
 
     free( line_delimiter );
 }
-```
-
-#### Function: processPreformatted
-
-```main.c
+</pre>
+<h3>Function: processPreformatted</h3>
+<pre>
 void processPreformatted( const char* line, FILE* stream, const char* line_delimiter )
 {
     int   loop = 1;
@@ -479,15 +467,13 @@ void processPreformatted( const char* line, FILE* stream, const char* line_delim
 
     fclose( dev_null );
 }
-```
-
-### General purpose functions
-
+</pre>
+<h2>General purpose functions</h2>
+<p class='paragraph'>
 The following functions are general purpose, and can be used by any program.
-
-#### Function: readline
-
-```main.c
+</p>
+<h3>Function: readline</h3>
+<pre>
 char* readline( FILE* stream )
 {
     int  n     = 0;
@@ -531,24 +517,22 @@ char* readline( FILE* stream )
 
     return line;
 }
-```
-
-#### Function: stringEquals
-
-```main.c
+</pre>
+<h3>Function: stringEquals</h3>
+<pre>
 int stringEquals( const char* one, const char* two )
 {
     return (0 == strcmp( one, two ));
 }
-```
-
-#### Function: stringHasPrefix
-
-```main.c
+</pre>
+<h3>Function: stringHasPrefix</h3>
+<pre>
 int stringHasPrefix( const char* string, const char* prefix )
 {
     int len = strlen( prefix );
 
     return (0 == strncmp( string, prefix, len ));
 }
-```
+</pre>
+</body>
+</html>
