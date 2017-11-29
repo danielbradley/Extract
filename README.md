@@ -8,7 +8,7 @@ MaxText is a plain text markup system that is similar conceptually to Markdown.
 
 Markdown uses a triplet of back-ticks ("```") in the left-most column to indicate the start and end of a pre-formatted text section, while Maxtext uses a tilde ('~') character.
 While, technically, both text systems ignore any remaining text on the line,
-some systems such as Github, allow remaining text to hint at a programming language,
+some systems such as Github, allow remaining text to hint at a programming language for syntax highlighting,
 and others such as Pandoc may not recognise the delimiter if there are spaces in any remaining text.
 
 'Extract' uses these superfluous characters to indicate a pattern that will be matched against a pattern passed
@@ -26,6 +26,7 @@ When using Markdown, such a pre-formatted block would be delimited as such:
 ```
  ```tables
  Pre-formatted text here
+ ```
 ```
 
 Unfortunately, it seems like there is no pattern that can be used with both Pandoc and Github to indicate both a pattern and a file type.
