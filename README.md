@@ -112,8 +112,8 @@ if 'DEBUG' is set to 'TRUE', extra debugging lines are output to the standard er
 if 'STRIP' is set to 'TRUE', extract will strip lines beginning with 'DELIMITER' from the ouput.
 
 ```main.c
-static bool DEBUG = FALSE;
-static bool STRIP = FALSE;
+static bool DEBUG = 0; // FALSE;
+static bool STRIP = 0; // FALSE;
 ```
 
 ### High-level function structure
@@ -149,7 +149,7 @@ bool argumentsContains( int argc, char** argv, char* flag );
 The 'argumentsContains' function check each of the arguments passed to main to see if it matches the specified flag.
 
 ```main.c
-char* argumentsGetValue( int n, char** files, char* flag )
+char* argumentsGetValue( int n, char** files, char* flag );
 ```
 
 The 'argumentsGetValue' function retrieves (if appropriate) the value following a specific flag.
@@ -161,20 +161,20 @@ int usage();
 The 'usage' function simply prints out the usage string and always returns -1.
 
 ```main.c
-char* generateDelimiter( const char* pattern );
+char* generateDelimiter( const char* prefix, const char* pattern, const char* suffix );
 ```
 
 The 'generate' pattern function is used to generate the line delimiter to be searched for in the input files.
 
 ```main.c
-void tryToProcess( char* file, const char* line_pattern );
+void tryToProcess( char* file, const char* pattern );
 ```
 
 The 'tryToProcess' function tries to open the passed file, and if successful passes the opened stream to
 'process' along with the passed line pattern.
 
 ```main.c
-void process( FILE*, const char* );
+void process( FILE*, const char* pattern );
 ```
 
 The 'process' function reads each line of the passed stream,
@@ -194,7 +194,17 @@ void processPreformatted( char* line, FILE*, const char* pattern );
 The 'processPreformatted' function is used to strip out lines starting with specific keywords such as 'DELIMITER', or 'DROP',
 which (in the case of SQL) it is often desirous to remove for installation scripts.
 
+```main.c
+int stringEquals( const char* one, const char* two );
+```
 
+The 'stringEquals' function compares whether the two passed strings contain the same characters.
+
+```main.c
+int stringHasPrefix( const char* string, const char* prefix );
+```
+
+The 'stringHasPrefix' function determins whether the passed string has the passed prefix.
 
 ### Low-level implemention function descriptions
 
@@ -229,8 +239,6 @@ int main( int argc, char** argv )
     }
     else
     {
-        char* line_delimiter = generateDelimiter( pat );
-
         //
         //  Must try to process each arg that does not start with '-', except:
         //  argv[0], which is process name, and
@@ -242,7 +250,7 @@ int main( int argc, char** argv )
         {
             if ( '-' != argv[i][0] )
             {
-                tryToProcess( argv[i], line_delimiter );
+                tryToProcess( argv[i], pat );
             }
             else
             if ( 'p' == argv[i][1] )
@@ -250,8 +258,6 @@ int main( int argc, char** argv )
                 i++;
             }
         }
-
-        free( line_delimiter );
     }
     free( pat );
 
@@ -313,13 +319,13 @@ int usage()
 #### Function: generateDelimiter
 
 ```main.c
-char* generateDelimiter( const char* pat )
+char* generateDelimiter( const char* prefix, const char* pattern, const char* suffix )
 {
-    char* delimiter = calloc( strlen( pat ) + 3, sizeof(char) );
+    char* delimiter = calloc( strlen( prefix ) + strlen( pattern ) + strlen( suffix ) + 1, sizeof(char) );
     char* tmp       = delimiter;
-          tmp       = stpcpy( tmp, "~" );
-          tmp       = stpcpy( tmp, pat );
-          tmp       = stpcpy( tmp, "~" );
+          tmp       = stpcpy( tmp, prefix  );
+          tmp       = stpcpy( tmp, pattern );
+          tmp       = stpcpy( tmp, suffix  );
 
     return delimiter;
 }
@@ -345,7 +351,9 @@ void tryToProcess( char* file, const char* pattern )
 ```main.c
 void process( FILE* stream, const char* pattern )
 {
+    char* line_delimiter = "";
     char* line;
+
     do
     {
         line = readline( stream );
@@ -354,8 +362,19 @@ void process( FILE* stream, const char* pattern )
             switch ( line[0] )
             {
             case '~':
+                line_delimiter = generateDelimiter( "~", pattern, "~" );
+
                 if ( DEBUG ) fprintf( stderr, "@%s", line );
-                processPreformatted( line, stream, pattern );
+                processPreformatted( line, stream, line_delimiter );
+                break;
+            case '`':
+                line_delimiter = generateDelimiter( "```", pattern, "" );
+
+                if ( ('`' == line[1]) && ('`' == line[2]) )
+                {
+                    if ( DEBUG ) fprintf( stderr, "@%s", line );
+                    processPreformatted( line, stream, line_delimiter );
+                }
                 break;
             default:
                 if ( DEBUG ) fprintf( stderr, "@%s", line );
@@ -363,13 +382,15 @@ void process( FILE* stream, const char* pattern )
             free( line );
         }
     } while ( line );
+
+    free( line_delimiter );
 }
 ```
 
 #### Function: processPreformatted
 
 ```main.c
-void processPreformatted( char* line, FILE* stream, const char* pattern )
+void processPreformatted( char* line, FILE* stream, const char* line_delimiter )
 {
     int   loop = 1;
     char* pre;
@@ -378,7 +399,7 @@ void processPreformatted( char* line, FILE* stream, const char* pattern )
     FILE* out      = dev_null;
     char* c        = "@";
 
-    if ( 0 == strncmp( pattern, line, strlen(pattern) ) )
+    if ( 0 == strncmp( line_delimiter, line, strlen(line_delimiter) ) )
     {
         out = stdout;
         c   = "";
@@ -491,8 +512,8 @@ int stringEquals( const char* one, const char* two )
 ```main.c
 int stringHasPrefix( const char* string, const char* prefix )
 {
-    int len = strlen( prefix )
+    int len = strlen( prefix );
 
-    return (0 == strcmp( string, prefix, len ));
+    return (0 == strncmp( string, prefix, len ));
 }
 ```

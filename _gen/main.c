@@ -10,26 +10,30 @@
 
 typedef int bool;
 
-static bool DEBUG = FALSE;
-static bool STRIP = FALSE;
+static bool DEBUG = 0; // FALSE;
+static bool STRIP = 0; // FALSE;
 
 int main( int argc, char** argv );
 
 bool argumentsContains( int argc, char** argv, char* flag );
 
-char* argumentsGetValue( int n, char** files, char* flag )
+char* argumentsGetValue( int n, char** files, char* flag );
 
 int usage();
 
-char* generateDelimiter( const char* pattern );
+char* generateDelimiter( const char* prefix, const char* pattern, const char* suffix );
 
-void tryToProcess( char* file, const char* line_pattern );
+void tryToProcess( char* file, const char* pattern );
 
-void process( FILE*, const char* );
+void process( FILE*, const char* pattern );
 
 char* readline( FILE* );
 
 void processPreformatted( char* line, FILE*, const char* pattern );
+
+int stringEquals( const char* one, const char* two );
+
+int stringHasPrefix( const char* string, const char* prefix );
 
 int main( int argc, char** argv )
 {
@@ -50,8 +54,6 @@ int main( int argc, char** argv )
     }
     else
     {
-        char* line_delimiter = generateDelimiter( pat );
-
         //
         //  Must try to process each arg that does not start with '-', except:
         //  argv[0], which is process name, and
@@ -63,7 +65,7 @@ int main( int argc, char** argv )
         {
             if ( '-' != argv[i][0] )
             {
-                tryToProcess( argv[i], line_delimiter );
+                tryToProcess( argv[i], pat );
             }
             else
             if ( 'p' == argv[i][1] )
@@ -71,8 +73,6 @@ int main( int argc, char** argv )
                 i++;
             }
         }
-
-        free( line_delimiter );
     }
     free( pat );
 
@@ -118,13 +118,13 @@ int usage()
     return -1;
 }
 
-char* generateDelimiter( const char* pat )
+char* generateDelimiter( const char* prefix, const char* pattern, const char* suffix )
 {
-    char* delimiter = calloc( strlen( pat ) + 3, sizeof(char) );
+    char* delimiter = calloc( strlen( prefix ) + strlen( pattern ) + strlen( suffix ) + 1, sizeof(char) );
     char* tmp       = delimiter;
-          tmp       = stpcpy( tmp, "~" );
-          tmp       = stpcpy( tmp, pat );
-          tmp       = stpcpy( tmp, "~" );
+          tmp       = stpcpy( tmp, prefix  );
+          tmp       = stpcpy( tmp, pattern );
+          tmp       = stpcpy( tmp, suffix  );
 
     return delimiter;
 }
@@ -142,7 +142,9 @@ void tryToProcess( char* file, const char* pattern )
 
 void process( FILE* stream, const char* pattern )
 {
+    char* line_delimiter = "";
     char* line;
+
     do
     {
         line = readline( stream );
@@ -151,8 +153,19 @@ void process( FILE* stream, const char* pattern )
             switch ( line[0] )
             {
             case '~':
+                line_delimiter = generateDelimiter( "~", pattern, "~" );
+
                 if ( DEBUG ) fprintf( stderr, "@%s", line );
-                processPreformatted( line, stream, pattern );
+                processPreformatted( line, stream, line_delimiter );
+                break;
+            case '`':
+                line_delimiter = generateDelimiter( "```", pattern, "" );
+
+                if ( ('`' == line[1]) && ('`' == line[2]) )
+                {
+                    if ( DEBUG ) fprintf( stderr, "@%s", line );
+                    processPreformatted( line, stream, line_delimiter );
+                }
                 break;
             default:
                 if ( DEBUG ) fprintf( stderr, "@%s", line );
@@ -160,9 +173,11 @@ void process( FILE* stream, const char* pattern )
             free( line );
         }
     } while ( line );
+
+    free( line_delimiter );
 }
 
-void processPreformatted( char* line, FILE* stream, const char* pattern )
+void processPreformatted( char* line, FILE* stream, const char* line_delimiter )
 {
     int   loop = 1;
     char* pre;
@@ -171,7 +186,7 @@ void processPreformatted( char* line, FILE* stream, const char* pattern )
     FILE* out      = dev_null;
     char* c        = "@";
 
-    if ( 0 == strncmp( pattern, line, strlen(pattern) ) )
+    if ( 0 == strncmp( line_delimiter, line, strlen(line_delimiter) ) )
     {
         out = stdout;
         c   = "";
@@ -272,8 +287,8 @@ int stringEquals( const char* one, const char* two )
 
 int stringHasPrefix( const char* string, const char* prefix )
 {
-    int len = strlen( prefix )
+    int len = strlen( prefix );
 
-    return (0 == strcmp( string, prefix, len ));
+    return (0 == strncmp( string, prefix, len ));
 }
 
