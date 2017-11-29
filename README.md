@@ -147,10 +147,10 @@ main
  |-- argumentsContains -- stringEquals
  |-- argumentsGetValue -- stringEquals
  |-- usage
- |-- generateDelimiter
  |-- tryToProcess
       |-- process
            |-- readline
+           |-- generateDelimiter
            |-- processPreformatted
 ```
 
@@ -183,12 +183,6 @@ int usage();
 The 'usage' function simply prints out the usage string and always returns -1.
 
 ```main.c
-char* generateDelimiter( const char* prefix, const char* pattern, const char* suffix );
-```
-
-The 'generateDelimiter' function is used to generate the line delimiter to be searched for in the input files.
-
-```main.c
 void tryToProcess( char* file, const char* pattern );
 ```
 
@@ -208,6 +202,12 @@ char* readline( FILE* );
 ```
 
 The 'readline' function reimplements the UNIX readline function for portability.
+
+```main.c
+char* generateDelimiter( const char* prefix, const char* pattern, const char* suffix );
+```
+
+The 'generateDelimiter' function is used to generate the line delimiter to be searched for in the input files.
 
 ```main.c
 void processPreformatted( const char* line, FILE*, const char* pattern );
@@ -338,21 +338,6 @@ int usage()
 }
 ```
 
-#### Function: generateDelimiter
-
-```main.c
-char* generateDelimiter( const char* prefix, const char* pattern, const char* suffix )
-{
-    char* delimiter = calloc( strlen( prefix ) + strlen( pattern ) + strlen( suffix ) + 1, sizeof(char) );
-    char* tmp       = delimiter;
-          tmp       = stpcpy( tmp, prefix  );
-          tmp       = stpcpy( tmp, pattern );
-          tmp       = stpcpy( tmp, suffix  );
-
-    return delimiter;
-}
-```
-
 #### Function: tryToProcess
 
 ```main.c
@@ -409,6 +394,21 @@ void process( FILE* stream, const char* pattern )
 }
 ```
 
+#### Function: generateDelimiter
+
+```main.c
+char* generateDelimiter( const char* prefix, const char* pattern, const char* suffix )
+{
+    char* delimiter = calloc( strlen( prefix ) + strlen( pattern ) + strlen( suffix ) + 1, sizeof(char) );
+    char* tmp       = delimiter;
+          tmp       = stpcpy( tmp, prefix  );
+          tmp       = stpcpy( tmp, pattern );
+          tmp       = stpcpy( tmp, suffix  );
+
+    return delimiter;
+}
+```
+
 #### Function: processPreformatted
 
 ```main.c
@@ -421,7 +421,7 @@ void processPreformatted( const char* line, FILE* stream, const char* line_delim
     FILE* out      = dev_null;
     char* c        = "@";
 
-    if ( 0 == strncmp( line_delimiter, line, strlen(line_delimiter) ) )
+    if ( stringHasPrefix( line, line_delimiter ) )
     {
         out = stdout;
         c   = "";
@@ -444,13 +444,17 @@ void processPreformatted( const char* line, FILE* stream, const char* line_delim
                     if ( '/' == pre[1] ) fprintf( out, ";\n" );
                     break;
                 case 'D':
+                    if ( stringHasPrefix( pre, "DROP"      ) ) break;
+                    if ( stringHasPrefix( pre, "DELIMITER" ) ) break;
+                    break;
+
                 case 'd':
-                    if ( 0 == strncmp( "DROP",      pre, strlen( "DROP"      ) ) ) break;
-                    if ( 0 == strncmp( "drop",      pre, strlen( "drop"      ) ) ) break;
-                    if ( 0 == strncmp( "DELIMITER", pre, strlen( "DELIMITER" ) ) ) break;
-                    if ( 0 == strncmp( "delimiter", pre, strlen( "delimiter" ) ) ) break;
+                    if ( stringHasPrefix( pre, "drop"      ) ) break;
+                    if ( stringHasPrefix( pre, "delimiter" ) ) break;
+                    break;
+
                 default:
-                    if ( 0 != strncmp( "@", c, 1 ) ) fprintf( out, "%s%s", c, pre );
+                    if ( !stringHasPrefix( c, "@" ) ) fprintf( out, "%s%s", c, pre );
                 }
             }
             else
@@ -461,13 +465,19 @@ void processPreformatted( const char* line, FILE* stream, const char* line_delim
                     if ( DEBUG ) fprintf( stderr, "@%s", pre );
                     loop = 0;
                     break;
+
                 case 'D':
+                    if ( stringHasPrefix( pre, "DROP"      ) ) break;
+                    if ( stringHasPrefix( pre, "DELIMITER" ) ) break;
+                    break;
+
                 case 'd':
-                    if ( 0 == strncmp( "DROP",      pre, strlen( "DROP"      ) ) ) break;
-                    if ( 0 == strncmp( "drop",      pre, strlen( "drop"      ) ) ) break;
-                    if ( 0 == strncmp( "delimiter", pre, strlen( "delimiter" ) ) ) break;
+                    if ( stringHasPrefix( pre, "drop"      ) ) break;
+                    if ( stringHasPrefix( pre, "delimiter" ) ) break;
+                    break;
+
                 default:
-                    if ( 0 != strncmp( "@", c, 1 ) ) fprintf( out, "%s%s", c, pre );
+                    if ( !stringHasPrefix( c, "@" ) ) fprintf( out, "%s%s", c, pre );
                 }
             }
             free( pre );
