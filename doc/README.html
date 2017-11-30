@@ -1,0 +1,368 @@
+<h1 id="extract">Extract</h1>
+<p>Daniel Bradley - daniel@crossadaptive.com</p>
+<p>Extract is Copyright 2011-2017 Daniel Robert Bradley</p>
+<p>Extract is distributed under the terms of the GNU General Public License Version 3, as is provided in the file GNU_GPL_License_v3.txt</p>
+<h2 id="introduction">Introduction</h2>
+<p>'Extract' is a command line tool for extracting SQL and other code from marked up text files that are able to represent pre-formatted text sections.</p>
+<p>Currently, two such text formats are explicitly supported - Markdown and MaxText. MaxText is a plain text markup system that is similar conceptually to Markdown.</p>
+<h2 id="quick-start">Quick start</h2>
+<ol style="list-style-type: decimal">
+<li>Download Quasi from: here</li>
+<li>Compile by typing this</li>
+</ol>
+<h2 id="maxtext-versus-markdown">MaxText versus Markdown</h2>
+<p>Markdown uses a triplet of back-ticks (&quot;```&quot;) in the left-most column to indicate the start and end of a pre-formatted text section, while Maxtext uses a tilde ('~') character. While, technically, both text systems ignore any remaining text on the line, some systems such as Github, allow remaining text to hint at a programming language for syntax highlighting, and others such as Pandoc may not recognise the delimiter if there are spaces in any remaining text.</p>
+<p>'Extract' uses these superfluous characters to indicate a pattern that will be matched against a pattern passed as a common-line argument. For example, when run, the following command line matches pre-formatted sections in the specified files that contain the pattern 'tables'.</p>
+<pre><code>extract -p &quot;tables&quot; source/mt/file.txt &gt; sql/tables.sql</code></pre>
+<p>When using Markdown, such a pre-formatted block would begin with a line such as:</p>
+<pre><code> ```tables</code></pre>
+<p>Unfortunately, it seems like there is no pattern that can be used with both Pandoc and Github to indicate both a pattern and a file type. For example, Github will accept a delimiter such as that below and appropriately mark it up as SQL:</p>
+<pre><code> ```tables sql</code></pre>
+<p>However, Pandoc does not seem to accept such a delimiter, but rather will accept the following, which is not accepted by Github:</p>
+<pre><code> ```tables.sql</code></pre>
+<p>Therefore, if you will only be using Github you can use a pattern that has a space then 'sql', however, if you will be using Pandoc, use a pattern with no spaces in it.</p>
+<p>Hopefully, in the future one of these two systems will be modified so that they can support similar patterns.</p>
+<h2 id="implementation">Implementation</h2>
+<p>The following sections describe the current implementation of 'Extract'. This implementation now uses the &quot;quasi-literate programming&quot; style as described at: [https://www.quasi-literateprogramming.org]. To facilitate this implementation that now supports Markdown, the tool 'quasi' was also extended to support Markdown.</p>
+<p>Source code extracted from this file may be viewed under the 'source/c' directory.</p>
+<div class="sourceCode"><pre class="sourceCode !main.c"><code class="sourceCode c"><span class="co">/*</span>
+<span class="co"> *  !!! This document has been auto-generated using quasi !!!</span>
+<span class="co"> */</span></code></pre></div>
+<h3 id="dependencies">Dependencies</h3>
+<p>'Extract' depends on functions declared in the following header files.</p>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="pp">#include </span><span class="im">&lt;stdlib.h&gt;</span></code></pre></div>
+<p>This header is included to provide access to the 'calloc', 'realloc', and 'free' functions: 'calloc' is used to allocate memory that has been zeroed, 'realloc' is used in the 'readline' function to increase the size of the line buffer, while 'free' is used to deallocate allocated memory.</p>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="pp">#include </span><span class="im">&lt;stdio.h&gt;</span></code></pre></div>
+<p>This header is included to provide access to the 'fopen', 'fclose', and 'fprintf' functions: 'fopen' is used to open the files indicated by the command-line arguments, as well as open '/dev/null', 'fclose' is used to close those files, and 'fprintf' is used to write pre-formatted text blocks to the standard output stream.</p>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="pp">#include </span><span class="im">&lt;string.h&gt;</span></code></pre></div>
+<p>This header is included to provide access to the 'strdup', 'strcmp', 'strncmp', 'strlen', and 'stpcpy' functions: 'strdup' is used to duplicate the passed string, 'strcmp' and 'strncmp' are used to compare whether two strings are equal ('strcmp'), or whether one is a prefix of the other ('strncmp'). 'strlen' is used to find the length of a string, and 'stpcpy' is used to concatenate a prefix, pattern, and suffix to create the appropriate line delimiter for either Markdown or MaxText.</p>
+<h3 id="defined-types-and-values">Defined types and values</h3>
+<p>The 'int' type is typecast to a 'bool' for readability.</p>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="kw">typedef</span> <span class="dt">int</span> bool;</code></pre></div>
+<h3 id="definition-of-booleans">Definition of booleans</h3>
+<p>Also for readability, the booleans TRUE and FALSE are defined.</p>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="pp">#define FALSE 0;</span>
+<span class="pp">#define TRUE 1;</span></code></pre></div>
+<h3 id="global-state">Global state</h3>
+<p>The implementation has two global variables: if 'DEBUG' is set to 'TRUE', extra debugging lines are output to the standard error stream. if 'STRIP' is set to 'TRUE', extract will strip lines beginning with 'DELIMITER' from the ouput.</p>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">static</span> bool DEBUG = FALSE;
+<span class="dt">static</span> bool STRIP = FALSE;</code></pre></div>
+<h3 id="high-level-function-structure">High-level function structure</h3>
+<p>'Extract' has a simple call-graph, which is shown below:</p>
+<pre><code>main
+ |-- argumentsContains -- stringEquals
+ |-- argumentsGetValue -- stringEquals
+ |-- usage
+ |-- tryToProcess
+      |-- process
+           |-- readline
+           |-- generateDelimiter
+           |-- processPreformatted</code></pre>
+<p>A summary of these functions is given, then their implementation is discussed in detail.</p>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">int</span> main( <span class="dt">int</span> argc, <span class="dt">char</span>** argv );</code></pre></div>
+<p>The 'main' function is responsible for checking whether appropriate arguments have been passed and: if so, calling tryToProcess on each file and; if not, calling the 'usage' function.</p>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c">bool argumentsContains( <span class="dt">int</span> argc, <span class="dt">char</span>** argv, <span class="dt">char</span>* flag );</code></pre></div>
+<p>The 'argumentsContains' function check each of the arguments passed to main to see if it matches the specified flag.</p>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">char</span>* argumentsGetValue( <span class="dt">int</span> n, <span class="dt">char</span>** files, <span class="dt">char</span>* flag );</code></pre></div>
+<p>The 'argumentsGetValue' function retrieves (if appropriate) the value following a specific flag.</p>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">int</span> usage();</code></pre></div>
+<p>The 'usage' function simply prints out the usage string and always returns -1.</p>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">void</span> tryToProcess( <span class="dt">char</span>* file, <span class="dt">const</span> <span class="dt">char</span>* pattern );</code></pre></div>
+<p>The 'tryToProcess' function tries to open the passed file, and if successful passes the opened stream to 'process' along with the passed line pattern delimiter.</p>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">void</span> process( FILE*, <span class="dt">const</span> <span class="dt">char</span>* pattern );</code></pre></div>
+<p>The 'process' function reads each line of the passed stream, and if the passed line pattern delimiter is found outputs any further lines to standard output until an end delimiter is encountered.</p>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">char</span>* readline( FILE* );</code></pre></div>
+<p>The 'readline' function reimplements the UNIX readline function for portability.</p>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">char</span>* generateDelimiter( <span class="dt">const</span> <span class="dt">char</span>* prefix, <span class="dt">const</span> <span class="dt">char</span>* pattern, <span class="dt">const</span> <span class="dt">char</span>* suffix );</code></pre></div>
+<p>The 'generateDelimiter' function is used to generate the line delimiter to be searched for in the input files.</p>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">void</span> processPreformatted( <span class="dt">const</span> <span class="dt">char</span>* line, FILE*, <span class="dt">const</span> <span class="dt">char</span>* pattern );</code></pre></div>
+<p>If the strip ('-s') flag has been used, the 'processPreformatted' function is used to strip out lines starting with specific keywords such as 'DELIMITER', or 'DROP', which (in the case of SQL) it is often desirous to remove for installation scripts.</p>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">int</span> stringEquals( <span class="dt">const</span> <span class="dt">char</span>* one, <span class="dt">const</span> <span class="dt">char</span>* two );</code></pre></div>
+<p>The 'stringEquals' function compares whether the two passed strings contain the same characters.</p>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">int</span> stringHasPrefix( <span class="dt">const</span> <span class="dt">char</span>* string, <span class="dt">const</span> <span class="dt">char</span>* prefix );</code></pre></div>
+<p>The 'stringHasPrefix' function determins whether the passed string has the passed prefix.</p>
+<h3 id="low-level-implemention-function-descriptions">Low-level implemention function descriptions</h3>
+<h4 id="function-main">Function: main</h4>
+<p>The main function first processes the passed arguments to retrieve the pattern, and to determine whether the <em>strip</em> flag has been passed, e.g., ('-s').</p>
+<p>If a pattern has not been passed, or the number of arguments passed are less than expected, the usage() function is called and exit is called.</p>
+<p>Otherwise, each file passed in the arguments is passed to the 'tryToProcess' function along with the specified pattern.</p>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">int</span> main( <span class="dt">int</span> argc, <span class="dt">char</span>** argv )
+{
+    <span class="dt">char</span>* pat = argumentsGetValue( argc, argv, <span class="st">&quot;-p&quot;</span> );
+    STRIP     = argumentsContains( argc, argv, <span class="st">&quot;-s&quot;</span> ) ? <span class="dv">1</span> : <span class="dv">0</span>;
+
+                                        <span class="co">// 1.       2.  3.  4.            5.</span>
+    <span class="dt">int</span> expected_arguments = <span class="dv">4</span> + STRIP; <span class="co">// extract [-s] -p &quot;some pattern&quot; file...</span>
+
+    <span class="cf">if</span> ( ! pat )
+    {
+        exit( usage() );
+    }
+    <span class="cf">else</span>
+    <span class="cf">if</span> ( argc &lt; expected_arguments )
+    {
+        exit( usage() );
+    }
+    <span class="cf">else</span>
+    {
+        <span class="co">//</span>
+        <span class="co">//  Must try to process each arg that does not start with &#39;-&#39;, except:</span>
+        <span class="co">//  argv[0], which is process name, and</span>
+        <span class="co">//  argv[?], pattern which follows &#39;-p&#39;.</span>
+        <span class="co">//</span>
+
+        <span class="dt">int</span> i;
+        <span class="cf">for</span> ( i = <span class="dv">1</span>; i &lt; argc; i++ )
+        {
+            <span class="cf">if</span> ( <span class="ch">&#39;-&#39;</span> != argv[i][<span class="dv">0</span>] )
+            {
+                tryToProcess( argv[i], pat );
+            }
+            <span class="cf">else</span>
+            <span class="cf">if</span> ( <span class="ch">&#39;p&#39;</span> == argv[i][<span class="dv">1</span>] )
+            {
+                i++;
+            }
+        }
+    }
+    free( pat );
+
+    <span class="cf">return</span> <span class="dv">0</span>;
+}</code></pre></div>
+<h4 id="function-argumentcontains">Function: argumentContains</h4>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">int</span> argumentsContains( <span class="dt">int</span> n, <span class="dt">char</span>** files, <span class="dt">char</span>* flag )
+{
+    <span class="dt">int</span> b = <span class="dv">0</span>;
+    <span class="dt">int</span> i;
+
+    <span class="cf">for</span> ( i=<span class="dv">0</span>; i &lt; n; i++ )
+    {
+        <span class="cf">if</span> ( stringEquals( flag, files[i] ) )
+        {
+            b = <span class="dv">1</span>;
+            i = n;
+        }
+    }
+    <span class="cf">return</span> b;
+}</code></pre></div>
+<h4 id="function-argumentgetvalue">Function: argumentGetValue</h4>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">char</span>* argumentsGetValue( <span class="dt">int</span> n, <span class="dt">char</span>** files, <span class="dt">char</span>* flag )
+{
+    <span class="dt">char</span>* ret = NULL;
+    <span class="dt">int</span> i;
+
+    <span class="cf">for</span> ( i=<span class="dv">0</span>; i &lt; n; i++ )
+    {
+        <span class="cf">if</span> ( stringEquals( flag, files[i] ) )
+        {
+            i++;
+            <span class="cf">if</span> ( i &lt; n) ret = strdup( files[i] );
+            i = n;
+        }
+    }
+    <span class="cf">return</span> ret;
+}</code></pre></div>
+<h4 id="function-usage">Function: usage</h4>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">int</span> usage()
+{
+    fprintf( stderr, <span class="st">&quot;Usage:</span><span class="sc">\n\t</span><span class="st">extract [-s] -p &lt;pattern&gt; &lt;file&gt; [more files] [ &gt; output file ]</span><span class="sc">\n</span><span class="st">&quot;</span> );
+    <span class="cf">return</span> -<span class="dv">1</span>;
+}</code></pre></div>
+<h4 id="function-trytoprocess">Function: tryToProcess</h4>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">void</span> tryToProcess( <span class="dt">char</span>* file, <span class="dt">const</span> <span class="dt">char</span>* pattern )
+{
+    FILE* stream;
+    <span class="cf">if</span> ( (stream = fopen( file, <span class="st">&quot;r&quot;</span> )) )
+    {
+        <span class="cf">if</span> ( DEBUG ) fprintf( stderr, <span class="st">&quot;Processing: %s</span><span class="sc">\n</span><span class="st">&quot;</span>, file );
+        process( stream, pattern );
+        fclose( stream );
+    }
+}</code></pre></div>
+<h4 id="function-process">Function: process</h4>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">void</span> process( FILE* stream, <span class="dt">const</span> <span class="dt">char</span>* pattern )
+{
+    <span class="dt">char</span>* line_delimiter = NULL;
+    <span class="dt">char</span>* line;
+
+    <span class="cf">do</span>
+    {
+        line = readline( stream );
+        <span class="cf">if</span> ( line )
+        {
+            <span class="cf">switch</span> ( line[<span class="dv">0</span>] )
+            {
+            <span class="cf">case</span> <span class="ch">&#39;~&#39;</span>:
+                line_delimiter = generateDelimiter( <span class="st">&quot;~&quot;</span>, pattern, <span class="st">&quot;~&quot;</span> );
+
+                <span class="cf">if</span> ( DEBUG ) fprintf( stderr, <span class="st">&quot;@%s&quot;</span>, line );
+                processPreformatted( line, stream, line_delimiter );
+                <span class="cf">break</span>;
+            <span class="cf">case</span> <span class="ch">&#39;`&#39;</span>:
+                line_delimiter = generateDelimiter( <span class="st">&quot;```&quot;</span>, pattern, <span class="st">&quot;&quot;</span> );
+
+                <span class="cf">if</span> ( (<span class="ch">&#39;`&#39;</span> == line[<span class="dv">1</span>]) &amp;&amp; (<span class="ch">&#39;`&#39;</span> == line[<span class="dv">2</span>]) )
+                {
+                    <span class="cf">if</span> ( DEBUG ) fprintf( stderr, <span class="st">&quot;@%s&quot;</span>, line );
+                    processPreformatted( line, stream, line_delimiter );
+                }
+                <span class="cf">break</span>;
+            <span class="cf">default</span>:
+                <span class="cf">if</span> ( DEBUG ) fprintf( stderr, <span class="st">&quot;@%s&quot;</span>, line );
+            }
+            free( line );
+        }
+    } <span class="cf">while</span> ( line );
+
+    free( line_delimiter );
+}</code></pre></div>
+<h4 id="function-generatedelimiter">Function: generateDelimiter</h4>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">char</span>* generateDelimiter( <span class="dt">const</span> <span class="dt">char</span>* prefix, <span class="dt">const</span> <span class="dt">char</span>* pattern, <span class="dt">const</span> <span class="dt">char</span>* suffix )
+{
+    <span class="dt">char</span>* delimiter = calloc( strlen( prefix ) + strlen( pattern ) + strlen( suffix ) + <span class="dv">1</span>, <span class="kw">sizeof</span>(<span class="dt">char</span>) );
+    <span class="dt">char</span>* tmp       = delimiter;
+          tmp       = stpcpy( tmp, prefix  );
+          tmp       = stpcpy( tmp, pattern );
+          tmp       = stpcpy( tmp, suffix  );
+
+    <span class="cf">return</span> delimiter;
+}</code></pre></div>
+<h4 id="function-processpreformatted">Function: processPreformatted</h4>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">void</span> processPreformatted( <span class="dt">const</span> <span class="dt">char</span>* line, FILE* stream, <span class="dt">const</span> <span class="dt">char</span>* line_delimiter )
+{
+    <span class="dt">int</span>   loop = <span class="dv">1</span>;
+    <span class="dt">char</span>* pre;
+
+    FILE* dev_null = fopen( <span class="st">&quot;/dev/null&quot;</span>, <span class="st">&quot;a&quot;</span> );
+    FILE* out      = dev_null;
+    <span class="dt">char</span>* c        = <span class="st">&quot;@&quot;</span>;
+
+    <span class="cf">if</span> ( stringHasPrefix( line, line_delimiter ) )
+    {
+        out = stdout;
+        c   = <span class="st">&quot;&quot;</span>;
+    }
+
+    <span class="cf">do</span>
+    {
+        pre = readline( stream );
+        <span class="cf">if</span> ( pre )
+        {
+            <span class="cf">if</span> ( STRIP )
+            {
+                <span class="cf">switch</span> ( pre[<span class="dv">0</span>] )
+                {
+                <span class="cf">case</span> <span class="ch">&#39;~&#39;</span>:
+                    <span class="cf">if</span> ( DEBUG ) fprintf( stderr, <span class="st">&quot;@%s&quot;</span>, pre );
+                    loop = <span class="dv">0</span>;
+                    <span class="cf">break</span>;
+                <span class="cf">case</span> <span class="ch">&#39;/&#39;</span>:
+                    <span class="cf">if</span> ( <span class="ch">&#39;/&#39;</span> == pre[<span class="dv">1</span>] ) fprintf( out, <span class="st">&quot;;</span><span class="sc">\n</span><span class="st">&quot;</span> );
+                    <span class="cf">break</span>;
+                <span class="cf">case</span> <span class="ch">&#39;D&#39;</span>:
+                    <span class="cf">if</span> ( stringHasPrefix( pre, <span class="st">&quot;DROP&quot;</span>      ) ) <span class="cf">break</span>;
+                    <span class="cf">if</span> ( stringHasPrefix( pre, <span class="st">&quot;DELIMITER&quot;</span> ) ) <span class="cf">break</span>;
+                    <span class="cf">break</span>;
+
+                <span class="cf">case</span> <span class="ch">&#39;d&#39;</span>:
+                    <span class="cf">if</span> ( stringHasPrefix( pre, <span class="st">&quot;drop&quot;</span>      ) ) <span class="cf">break</span>;
+                    <span class="cf">if</span> ( stringHasPrefix( pre, <span class="st">&quot;delimiter&quot;</span> ) ) <span class="cf">break</span>;
+                    <span class="cf">break</span>;
+
+                <span class="cf">default</span>:
+                    <span class="cf">if</span> ( !stringHasPrefix( c, <span class="st">&quot;@&quot;</span> ) ) fprintf( out, <span class="st">&quot;%s%s&quot;</span>, c, pre );
+                }
+            }
+            <span class="cf">else</span>
+            {
+                <span class="cf">switch</span> ( pre[<span class="dv">0</span>] )
+                {
+                <span class="cf">case</span> <span class="ch">&#39;~&#39;</span>:
+                    <span class="cf">if</span> ( DEBUG ) fprintf( stderr, <span class="st">&quot;@%s&quot;</span>, pre );
+                    loop = <span class="dv">0</span>;
+                    <span class="cf">break</span>;
+
+                <span class="cf">case</span> <span class="ch">&#39;D&#39;</span>:
+                    <span class="cf">if</span> ( stringHasPrefix( pre, <span class="st">&quot;DROP&quot;</span>      ) ) <span class="cf">break</span>;
+                    <span class="cf">if</span> ( stringHasPrefix( pre, <span class="st">&quot;DELIMITER&quot;</span> ) ) <span class="cf">break</span>;
+                    <span class="cf">break</span>;
+
+                <span class="cf">case</span> <span class="ch">&#39;d&#39;</span>:
+                    <span class="cf">if</span> ( stringHasPrefix( pre, <span class="st">&quot;drop&quot;</span>      ) ) <span class="cf">break</span>;
+                    <span class="cf">if</span> ( stringHasPrefix( pre, <span class="st">&quot;delimiter&quot;</span> ) ) <span class="cf">break</span>;
+                    <span class="cf">break</span>;
+
+                <span class="cf">default</span>:
+                    <span class="cf">if</span> ( !stringHasPrefix( c, <span class="st">&quot;@&quot;</span> ) ) fprintf( out, <span class="st">&quot;%s%s&quot;</span>, c, pre );
+                }
+            }
+            free( pre );
+        } <span class="cf">else</span> {
+            loop = <span class="dv">0</span>;
+        }
+    }
+    <span class="cf">while</span> ( loop );
+
+    fclose( dev_null );
+}</code></pre></div>
+<h3 id="general-purpose-functions">General purpose functions</h3>
+<p>The following functions are general purpose, and can be used by any program.</p>
+<h4 id="function-readline">Function: readline</h4>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">char</span>* readline( FILE* stream )
+{
+    <span class="dt">int</span>  n     = <span class="dv">0</span>;
+    <span class="dt">int</span>  sz    = <span class="dv">1024</span>;
+    <span class="dt">char</span> ch[<span class="dv">2</span>] = { <span class="dv">0</span>, <span class="dv">0</span> };
+    <span class="dt">char</span>* line = calloc( sz + <span class="dv">1</span>, <span class="kw">sizeof</span>( <span class="dt">char</span> ) );
+
+    <span class="dt">int</span> read;
+    <span class="cf">do</span>
+    {
+        read = fread( ch, <span class="kw">sizeof</span>(<span class="dt">char</span>), <span class="dv">1</span>, stream );
+        <span class="cf">if</span> ( read )
+        {
+            <span class="cf">switch</span> ( *ch )
+            {
+            <span class="cf">case</span> <span class="ch">&#39;\n&#39;</span>:
+                line[n++] = *ch;
+                line[n]   = &#39;\<span class="dv">0</span>&#39;;
+                read      = <span class="dv">0</span>;
+                <span class="cf">break</span>;
+            <span class="cf">default</span>:
+                line[n++] = *ch;
+                line[n]   = &#39;\<span class="dv">0</span>&#39;;
+            }
+
+            <span class="cf">if</span> ( n == sz )
+            {
+                sz  *= <span class="dv">2</span>;
+                line = realloc( line, sz );
+            }
+        }
+        
+    }
+    <span class="cf">while</span> ( <span class="dv">0</span> != read );
+
+    <span class="cf">if</span> ( <span class="dv">0</span> == n )
+    {
+        free( line );
+        line = NULL;
+    }
+
+    <span class="cf">return</span> line;
+}</code></pre></div>
+<h4 id="function-stringequals">Function: stringEquals</h4>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">int</span> stringEquals( <span class="dt">const</span> <span class="dt">char</span>* one, <span class="dt">const</span> <span class="dt">char</span>* two )
+{
+    <span class="dt">int</span> l1 = strlen( one );
+    <span class="dt">int</span> l2 = strlen( two );
+
+    <span class="cf">return</span> (l1 == l2) &amp;&amp; (<span class="dv">0</span> == strncmp( one, two, l1 ));
+}</code></pre></div>
+<h4 id="function-stringhasprefix">Function: stringHasPrefix</h4>
+<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">int</span> stringHasPrefix( <span class="dt">const</span> <span class="dt">char</span>* string, <span class="dt">const</span> <span class="dt">char</span>* prefix )
+{
+    <span class="dt">int</span> len = strlen( prefix );
+
+    <span class="cf">return</span> (<span class="dv">0</span> == strncmp( string, prefix, len ));
+}</code></pre></div>

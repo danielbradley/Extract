@@ -22,11 +22,10 @@ md:
                             | sed 's|"https://www.quasi-literateprogramming.org"|[https://www.quasi-literateprogramming.org]|g' \
                             > README.md
 
-pull:
-	git pull
+doc: pandoc max2html
 
 pandoc:
 	pandoc -o doc/README.html README.md
 
-push:
-	git push
+maxtext:
+	max2html --out doc/extract --style share/css/style.css source/mt/*.txt

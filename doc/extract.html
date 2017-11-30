@@ -8,10 +8,17 @@
 <body class='maxtext'>
 <header id='title'> Extract</header>
 <header id='subtitle'> Daniel Bradley - daniel@crossadaptive.com</header>
+<p class='paragraph'>
+Extract is Copyright 2011-2017 Daniel Robert Bradley
+</p>
+<p class='paragraph'>
+Extract is distributed under the terms of the GNU General Public License Version 3,
+as is provided in the file GNU_GPL_License_v3.txt
+</p>
 <h1>Introduction</h1>
 <p class='paragraph'>
 'Extract' is a command line tool for extracting SQL and other code
-from marked up text files that are able to represent pre-formated text sections.
+from marked up text files that are able to represent pre-formatted text sections.
 </p>
 <p class='paragraph'>
 Currently, two such text formats are explicitly supported - Markdown and MaxText.
@@ -19,8 +26,8 @@ MaxText is a plain text markup system that is similar conceptually to Markdown.
 </p>
 <h1>Quick start</h1>
 <ol>
-<li>Download Quasi from: here
-</li><li>Compile by typing this
+<li>Download Quasi from here
+</li><li>Compile by typing make (binary is at bin/<arch><i>extract)
 </li></ol>
 <h1>MaxText versus Markdown</h1>
 <p class='paragraph'>
@@ -70,12 +77,12 @@ Hopefully, in the future one of these two systems will be modified so that they 
 <p class='paragraph'>
 The following sections describe the current implementation of 'Extract'.
 This implementation now uses the "quasi-literate programming" style as described at:
- "https:<i></i>www.quasi-literateprogramming.org".
+"https:<i></i>www.quasi-literateprogramming.org".
 To facilitate this implementation that now supports Markdown,
 the tool 'quasi' was also extended to support Markdown.
 </p>
 <p class='paragraph'>
-Source code extracted from this file may be viewed under the '_gen' directory.
+Source code extracted from this file may be viewed under the 'source/c' directory.
 </p>
 <pre>
 /*
@@ -145,13 +152,13 @@ static bool STRIP = FALSE;
 </p>
 <pre>
 main
- |-- argumentsContains
- |-- argumentsGetValue
+ |-- argumentsContains -- stringEquals
+ |-- argumentsGetValue -- stringEquals
  |-- usage
- |-- generateDelimiter
  |-- tryToProcess
       |-- process
            |-- readline
+           |-- generateDelimiter
            |-- processPreformatted
 </pre>
 <p class='paragraph'>
@@ -184,12 +191,6 @@ int usage();
 The 'usage' function simply prints out the usage string and always returns -1.
 </p>
 <pre>
-char* generateDelimiter( const char* prefix, const char* pattern, const char* suffix );
-</pre>
-<p class='paragraph'>
-The 'generateDelimiter' function is used to generate the line delimiter to be searched for in the input files.
-</p>
-<pre>
 void tryToProcess( char* file, const char* pattern );
 </pre>
 <p class='paragraph'>
@@ -209,6 +210,12 @@ char* readline( FILE* );
 </pre>
 <p class='paragraph'>
 The 'readline' function reimplements the UNIX readline function for portability.
+</p>
+<pre>
+char* generateDelimiter( const char* prefix, const char* pattern, const char* suffix );
+</pre>
+<p class='paragraph'>
+The 'generateDelimiter' function is used to generate the line delimiter to be searched for in the input files.
 </p>
 <pre>
 void processPreformatted( const char* line, FILE*, const char* pattern );
@@ -333,19 +340,6 @@ int usage()
     return -1;
 }
 </pre>
-<h3>Function: generateDelimiter</h3>
-<pre>
-char* generateDelimiter( const char* prefix, const char* pattern, const char* suffix )
-{
-    char* delimiter = calloc( strlen( prefix ) + strlen( pattern ) + strlen( suffix ) + 1, sizeof(char) );
-    char* tmp       = delimiter;
-          tmp       = stpcpy( tmp, prefix  );
-          tmp       = stpcpy( tmp, pattern );
-          tmp       = stpcpy( tmp, suffix  );
-
-    return delimiter;
-}
-</pre>
 <h3>Function: tryToProcess</h3>
 <pre>
 void tryToProcess( char* file, const char* pattern )
@@ -380,7 +374,7 @@ void process( FILE* stream, const char* pattern )
                 processPreformatted( line, stream, line_delimiter );
                 break;
             case '`':
-                line_delimiter = generateDelimiter( "~", pattern, "" );
+                line_delimiter = generateDelimiter( "```", pattern, "" );
 
                 if ( ('`' == line[1]) && ('`' == line[2]) )
                 {
@@ -398,6 +392,19 @@ void process( FILE* stream, const char* pattern )
     free( line_delimiter );
 }
 </pre>
+<h3>Function: generateDelimiter</h3>
+<pre>
+char* generateDelimiter( const char* prefix, const char* pattern, const char* suffix )
+{
+    char* delimiter = calloc( strlen( prefix ) + strlen( pattern ) + strlen( suffix ) + 1, sizeof(char) );
+    char* tmp       = delimiter;
+          tmp       = stpcpy( tmp, prefix  );
+          tmp       = stpcpy( tmp, pattern );
+          tmp       = stpcpy( tmp, suffix  );
+
+    return delimiter;
+}
+</pre>
 <h3>Function: processPreformatted</h3>
 <pre>
 void processPreformatted( const char* line, FILE* stream, const char* line_delimiter )
@@ -409,7 +416,7 @@ void processPreformatted( const char* line, FILE* stream, const char* line_delim
     FILE* out      = dev_null;
     char* c        = "@";
 
-    if ( 0 == strncmp( line_delimiter, line, strlen(line_delimiter) ) )
+    if ( stringHasPrefix( line, line_delimiter ) )
     {
         out = stdout;
         c   = "";
@@ -432,13 +439,17 @@ void processPreformatted( const char* line, FILE* stream, const char* line_delim
                     if ( '/' == pre[1] ) fprintf( out, ";\n" );
                     break;
                 case 'D':
+                    if ( stringHasPrefix( pre, "DROP"      ) ) break;
+                    if ( stringHasPrefix( pre, "DELIMITER" ) ) break;
+                    break;
+
                 case 'd':
-                    if ( 0 == strncmp( "DROP",      pre, strlen( "DROP"      ) ) ) break;
-                    if ( 0 == strncmp( "drop",      pre, strlen( "drop"      ) ) ) break;
-                    if ( 0 == strncmp( "DELIMITER", pre, strlen( "DELIMITER" ) ) ) break;
-                    if ( 0 == strncmp( "delimiter", pre, strlen( "delimiter" ) ) ) break;
+                    if ( stringHasPrefix( pre, "drop"      ) ) break;
+                    if ( stringHasPrefix( pre, "delimiter" ) ) break;
+                    break;
+
                 default:
-                    if ( 0 != strncmp( "@", c, 1 ) ) fprintf( out, "%s%s", c, pre );
+                    if ( !stringHasPrefix( c, "@" ) ) fprintf( out, "%s%s", c, pre );
                 }
             }
             else
@@ -449,13 +460,19 @@ void processPreformatted( const char* line, FILE* stream, const char* line_delim
                     if ( DEBUG ) fprintf( stderr, "@%s", pre );
                     loop = 0;
                     break;
+
                 case 'D':
+                    if ( stringHasPrefix( pre, "DROP"      ) ) break;
+                    if ( stringHasPrefix( pre, "DELIMITER" ) ) break;
+                    break;
+
                 case 'd':
-                    if ( 0 == strncmp( "DROP",      pre, strlen( "DROP"      ) ) ) break;
-                    if ( 0 == strncmp( "drop",      pre, strlen( "drop"      ) ) ) break;
-                    if ( 0 == strncmp( "delimiter", pre, strlen( "delimiter" ) ) ) break;
+                    if ( stringHasPrefix( pre, "drop"      ) ) break;
+                    if ( stringHasPrefix( pre, "delimiter" ) ) break;
+                    break;
+
                 default:
-                    if ( 0 != strncmp( "@", c, 1 ) ) fprintf( out, "%s%s", c, pre );
+                    if ( !stringHasPrefix( c, "@" ) ) fprintf( out, "%s%s", c, pre );
                 }
             }
             free( pre );
@@ -522,7 +539,10 @@ char* readline( FILE* stream )
 <pre>
 int stringEquals( const char* one, const char* two )
 {
-    return (0 == strcmp( one, two ));
+    int l1 = strlen( one );
+    int l2 = strlen( two );
+
+    return (l1 == l2) && (0 == strncmp( one, two, l1 ));
 }
 </pre>
 <h3>Function: stringHasPrefix</h3>
