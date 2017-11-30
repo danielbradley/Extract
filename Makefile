@@ -29,3 +29,7 @@ pandoc:
 
 maxtext:
 	max2html --out doc/extract --style share/css/style.css source/mt/*.txt
+
+clean:
+	rm -rf bin
+

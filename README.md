@@ -18,8 +18,8 @@ MaxText is a plain text markup system that is similar conceptually to Markdown.
 
 ## Quick start
 
-1) Download Quasi from: here
-2) Compile by typing this
+1) Download Quasi from here
+2) Compile by typing make (binary is at bin/<arch>/extract)
 
 
 ## MaxText versus Markdown
