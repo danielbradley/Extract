@@ -1,6 +1,11 @@
 # Extract
  Daniel Bradley - daniel@crossadaptive.com
 
+Extract is Copyright 2011-2017 Daniel Robert Bradley
+
+Extract is distributed under the terms of the GNU General Public License Version 3,
+as is provided in the file GNU_GPL_License_v3.txt
+
 ## Introduction
 
 'Extract' is a command line tool for extracting SQL and other code
