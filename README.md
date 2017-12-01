@@ -445,18 +445,18 @@ void processPreformatted( const char* line, FILE* stream, const char* line_delim
                     if ( DEBUG ) fprintf( stderr, "@%s", pre );
                     loop = 0;
                     break;
+
                 case '/':
                     if ( '/' == pre[1] ) fprintf( out, ";\n" );
                     break;
+
                 case 'D':
+                case 'd':
                     if ( stringHasPrefix( pre, "DROP"      ) ) break;
                     if ( stringHasPrefix( pre, "DELIMITER" ) ) break;
-                    break;
-
-                case 'd':
                     if ( stringHasPrefix( pre, "drop"      ) ) break;
                     if ( stringHasPrefix( pre, "delimiter" ) ) break;
-                    break;
+                    // fall through
 
                 default:
                     if ( !stringHasPrefix( c, "@" ) ) fprintf( out, "%s%s", c, pre );
@@ -472,19 +472,16 @@ void processPreformatted( const char* line, FILE* stream, const char* line_delim
                     break;
 
                 case 'D':
-                    if ( stringHasPrefix( pre, "DROP"      ) ) break;
-                    if ( stringHasPrefix( pre, "DELIMITER" ) ) break;
-                    break;
-
                 case 'd':
+                    if ( stringHasPrefix( pre, "DROP"      ) ) break;
                     if ( stringHasPrefix( pre, "drop"      ) ) break;
-                    if ( stringHasPrefix( pre, "delimiter" ) ) break;
-                    break;
+                    // fall through
 
                 default:
                     if ( !stringHasPrefix( c, "@" ) ) fprintf( out, "%s%s", c, pre );
                 }
             }
+
             free( pre );
         } else {
             loop = 0;
