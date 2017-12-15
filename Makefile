@@ -1,12 +1,16 @@
 arch := $(shell uname)
+quasi=libexec/quasi/bin/$(arch)/quasi
 
 all: quasi cc md
 
-quasi:
+quasi: $(quasi)
 	quasi -f source/c source/mt/*.txt
 
+$(quasi):
+	make -C libexec/quasi
+
 cc:
-	mkdir -p bin/$(arch)
+	mkdir  -p bin/$(arch)
 	gcc    -o bin/$(arch)/extract       source/c/main.c
 	gcc -g -o bin/$(arch)/extract-debug source/c/main.c
 
@@ -31,5 +35,6 @@ maxtext:
 	max2html --out doc/extract --style share/css/style.css source/mt/*.txt
 
 clean:
+	make -C libexec/quasi clean
 	rm -rf bin
 
