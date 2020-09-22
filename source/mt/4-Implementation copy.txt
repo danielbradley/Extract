@@ -49,6 +49,10 @@ This header is included to provide access to the 'strdup', 'strcmp', 'strncmp', 
 'strlen' is used to find the length of a string, and
 'stpcpy' is used to concatenate a prefix, pattern, and suffix to create the appropriate line delimiter for either Markdown or MaxText.
 
+~main.c~
+#include <curl/curl.h>
+~
+
 .. Defined types and values
 
 The 'int' type is typecast to a 'bool' for readability.
@@ -183,6 +187,15 @@ along with the specified pattern.
 ~main.c~
 int main( int argc, char** argv )
 {
+    curl_global_init( CURL_GLOBAL_ALL );
+
+    void* handle
+    =
+    curl_easy_init   ();
+    curl_easy_setopt ( handle, CURLOPT_URL, "http://sqlgen.azurewebsites.net/api/sqlgenerate/?table_info=tabletasks{@ORG_ID:Int*@PROJECT_ID:Int*@TASK_ID:Int^@task_name:Text@task_started:Datetime@task_start:Time@task_due:Date@task_cost:Money@task_place:Geo%Filter=TASK_ID;task_name%Module=tasks%OrderBy=TASK_ID;task_name%Output=mysql%Prefix=task_%Save=task_name%Security=INVOKER}" );
+    curl_easy_perform( handle );
+    curl_easy_cleanup( handle );
+
     char* pat = argumentsGetValue( argc, argv, "-p" );
     STRIP     = argumentsContains( argc, argv, "-s" ) ? 1 : 0;
 
@@ -221,6 +234,8 @@ int main( int argc, char** argv )
         }
     }
     free( pat );
+
+    curl_global_cleanup();
 
     return 0;
 }
@@ -358,10 +373,12 @@ void processPreformatted( const char* line, FILE* stream, const char* line_delim
 
     FILE* dev_null = fopen( "/dev/null", "a" );
     FILE* out      = dev_null;
+    //char* c        = "@";
 
     if ( stringHasPrefix( line, line_delimiter ) )
     {
         out = stdout;
+        //c   = "";
     }
 
     do
@@ -391,6 +408,7 @@ void processPreformatted( const char* line, FILE* stream, const char* line_delim
                     // fall through
 
                 default:
+                    //if ( !stringHasPrefix( c, "@" ) )
                     fprintf( out, "%s", pre );
                 }
             }
@@ -410,6 +428,7 @@ void processPreformatted( const char* line, FILE* stream, const char* line_delim
                     // fall through
 
                 default:
+                    //if ( !stringHasPrefix( c, "@" ) )
                     fprintf( out, "%s", pre );
                 }
             }
