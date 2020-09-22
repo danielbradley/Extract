@@ -450,22 +450,24 @@ void processPreformatted( const char* line, FILE* stream, const char* line_delim
 
     if ( stringHasPrefix( line, line_delimiter ) )
     {
-        char* host = "http://sqlgen.azurewebsites.net/api/sqlgenerate/?table_info=";
-        char* url  = calloc( strlen( host ) + size + 1, sizeof(char) );
+        if ( stringEquals( "~spgen~", line_delimiter ) )
+        {
+            char* host = "http://sqlgen.azurewebsites.net/api/sqlgenerate/?table_info=";
+            char* url  = calloc( strlen( host ) + size + 1, sizeof(char) );
 
-        sprintf( url, "%s%s", host, bp );
+            sprintf( url, "%s%s", host, bp );
 
-        url = canonicaliseSPGenURL( url );
+            url = canonicaliseSPGenURL( url );
 
-        void* handle
-        =
-        curl_easy_init   ();
-        curl_easy_setopt ( handle, CURLOPT_URL, url );
-        //curl_easy_setopt ( handle, CURLOPT_URL, url2 );
-        curl_easy_perform( handle );
-        curl_easy_cleanup( handle );
+            void* handle
+            =
+            curl_easy_init   ();
+            curl_easy_setopt ( handle, CURLOPT_URL, url );
+            curl_easy_perform( handle );
+            curl_easy_cleanup( handle );
 
-        fclose( out );
+            fclose( out );
+        }
     }
 
     fclose( dev_null );
