@@ -1,7 +1,7 @@
 # Extract
  Daniel Bradley - daniel@crossadaptive.com
 
-Extract is Copyright 2011-2017 Daniel Robert Bradley
+Extract is Copyright 2011-20202 Daniel Robert Bradley
 
 Extract is distributed under the terms of the GNU General Public License Version 3,
 as is provided in the file GNU_GPL_License_v3.txt
@@ -115,6 +115,10 @@ This header is included to provide access to the 'strdup', 'strcmp', 'strncmp', 
 'strlen' is used to find the length of a string, and
 'stpcpy' is used to concatenate a prefix, pattern, and suffix to create the appropriate line delimiter for either Markdown or MaxText.
 
+```main.c
+#include <curl/curl.h>
+```
+
 ### Defined types and values
 
 The 'int' type is typecast to a 'bool' for readability.
@@ -222,6 +226,14 @@ If the strip ('-s') flag has been used, the 'processPreformatted' function is us
 which (in the case of SQL) it is often desirous to remove for installation scripts.
 
 ```main.c
+char* canonicaliseSPGenURL( char* url );
+```
+
+If an SPGen pattern (~spgen~) is encountered the content of the preformatted block is passed in a request
+to generate SQL.
+The 'canonicaliseSPGenURL' function is used to remove any whitespace from the URL.
+
+```main.c
 int stringEquals( const char* one, const char* two );
 ```
 
@@ -249,6 +261,8 @@ along with the specified pattern.
 ```main.c
 int main( int argc, char** argv )
 {
+    curl_global_init( CURL_GLOBAL_ALL );
+
     char* pat = argumentsGetValue( argc, argv, "-p" );
     STRIP     = argumentsContains( argc, argv, "-s" ) ? 1 : 0;
 
@@ -287,6 +301,8 @@ int main( int argc, char** argv )
         }
     }
     free( pat );
+
+    curl_global_cleanup();
 
     return 0;
 }
@@ -375,27 +391,27 @@ void process( FILE* stream, const char* pattern )
             {
             case '~':
                 line_delimiter = generateDelimiter( "~", pattern, "~" );
-
                 if ( DEBUG ) fprintf( stderr, "@%s", line );
                 processPreformatted( line, stream, line_delimiter );
+                free( line_delimiter );
                 break;
+
             case '`':
                 line_delimiter = generateDelimiter( "```", pattern, "" );
-
                 if ( ('`' == line[1]) && ('`' == line[2]) )
                 {
                     if ( DEBUG ) fprintf( stderr, "@%s", line );
                     processPreformatted( line, stream, line_delimiter );
                 }
+                free( line_delimiter );
                 break;
+
             default:
                 if ( DEBUG ) fprintf( stderr, "@%s", line );
             }
             free( line );
         }
     } while ( line );
-
-    free( line_delimiter );
 }
 ```
 
@@ -419,17 +435,24 @@ char* generateDelimiter( const char* prefix, const char* pattern, const char* su
 ```main.c
 void processPreformatted( const char* line, FILE* stream, const char* line_delimiter )
 {
-    int   loop = 1;
-    char* pre;
+    int    loop = 1;
+    char*  pre;
+    char*  bp;
+    size_t size;
 
     FILE* dev_null = fopen( "/dev/null", "a" );
     FILE* out      = dev_null;
-    char* c        = "@";
 
     if ( stringHasPrefix( line, line_delimiter ) )
     {
-        out = stdout;
-        c   = "";
+        if ( stringEquals( "~spgen~", line_delimiter ) )
+        {
+            out = open_memstream( &bp, &size );
+        }
+        else
+        {
+            out = stdout;
+        }
     }
 
     do
@@ -459,7 +482,7 @@ void processPreformatted( const char* line, FILE* stream, const char* line_delim
                     // fall through
 
                 default:
-                    if ( !stringHasPrefix( c, "@" ) ) fprintf( out, "%s%s", c, pre );
+                    fprintf( out, "%s", pre );
                 }
             }
             else
@@ -478,7 +501,7 @@ void processPreformatted( const char* line, FILE* stream, const char* line_delim
                     // fall through
 
                 default:
-                    if ( !stringHasPrefix( c, "@" ) ) fprintf( out, "%s%s", c, pre );
+                    fprintf( out, "%s", pre );
                 }
             }
 
@@ -489,9 +512,60 @@ void processPreformatted( const char* line, FILE* stream, const char* line_delim
     }
     while ( loop );
 
+    fflush( out );
+
+    if ( stringHasPrefix( line, line_delimiter ) )
+    {
+        char* host = "http://sqlgen.azurewebsites.net/api/sqlgenerate/?table_info=";
+        char* url  = calloc( strlen( host ) + size + 1, sizeof(char) );
+
+        sprintf( url, "%s%s", host, bp );
+
+        url = canonicaliseSPGenURL( url );
+
+        void* handle
+        =
+        curl_easy_init   ();
+        curl_easy_setopt ( handle, CURLOPT_URL, url );
+        //curl_easy_setopt ( handle, CURLOPT_URL, url2 );
+        curl_easy_perform( handle );
+        curl_easy_cleanup( handle );
+
+        fclose( out );
+    }
+
     fclose( dev_null );
 }
 ```
+
+```main.c
+char* canonicaliseSPGenURL( char* url )
+{
+    int   len       = strlen( url );
+    char* canonical = calloc( len + 1, sizeof(char) );
+
+    int index = 0;
+    for ( int i=0; i < len; i++ )
+    {
+        switch ( url[i] )
+        {
+        case ' ':
+        case '\t':
+        case '\n':
+            break;
+
+        default:
+            canonical[index++] = url[i];
+        }
+    }
+
+    free( url );
+
+    return canonical;
+}
+```
+
+
 
 ### General purpose functions
 
@@ -503,7 +577,7 @@ The following functions are general purpose, and can be used by any program.
 char* readline( FILE* stream )
 {
     int  n     = 0;
-    int  sz    = 1024;
+    int  sz    = 10000;
     char ch[2] = { 0, 0 };
     char* line = calloc( sz + 1, sizeof( char ) );
 
@@ -513,6 +587,8 @@ char* readline( FILE* stream )
         read = fread( ch, sizeof(char), 1, stream );
         if ( read )
         {
+            if ( *ch > 127 ) fprintf( stderr, "%s", "(!!)" );
+
             switch ( *ch )
             {
             case '\n':
@@ -529,6 +605,7 @@ char* readline( FILE* stream )
             {
                 sz  *= 2;
                 line = realloc( line, sz );
+                fprintf( stderr, "%s", "#" );
             }
         }
         

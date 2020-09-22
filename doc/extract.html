@@ -9,7 +9,7 @@
 <header id='title'> Extract</header>
 <header id='subtitle'> Daniel Bradley - daniel@crossadaptive.com</header>
 <p class='paragraph'>
-Extract is Copyright 2011-2017 Daniel Robert Bradley
+Extract is Copyright 2011-20202 Daniel Robert Bradley
 </p>
 <p class='paragraph'>
 Extract is distributed under the terms of the GNU General Public License Version 3,
@@ -84,36 +84,44 @@ the tool 'quasi' was also extended to support Markdown.
 <p class='paragraph'>
 Source code extracted from this file may be viewed under the 'source/c' directory.
 </p>
+<code>
 <pre>
 /*
  *  !!! This document has been auto-generated using quasi !!!
  */
 </pre>
+</code>
 <h2>Dependencies</h2>
 <p class='paragraph'>
 'Extract' depends on functions declared in the following header files.
 </p>
+<code>
 <pre>
 #include &lt;stdlib.h&gt;
 </pre>
+</code>
 <p class='paragraph'>
 This header is included to provide access to the 'calloc', 'realloc', and 'free' functions:
 'calloc' is used to allocate memory that has been zeroed,
 'realloc' is used in the 'readline' function to increase the size of the line buffer,
 while 'free' is used to deallocate allocated memory.
 </p>
+<code>
 <pre>
 #include &lt;stdio.h&gt;
 </pre>
+</code>
 <p class='paragraph'>
 This header is included to provide access to the 'fopen', 'fclose', and 'fprintf' functions:
 'fopen' is used to open the files indicated by the command-line arguments, as well as open '/dev/null',
 'fclose' is used to close those files, and
 'fprintf' is used to write pre-formatted text blocks to the standard output stream.
 </p>
+<code>
 <pre>
 #include &lt;string.h&gt;
 </pre>
+</code>
 <p class='paragraph'>
 This header is included to provide access to the 'strdup', 'strcmp', 'strncmp', 'strlen', and 'stpcpy' functions:
 'strdup' is used to duplicate the passed string,
@@ -121,31 +129,42 @@ This header is included to provide access to the 'strdup', 'strcmp', 'strncmp', 
 'strlen' is used to find the length of a string, and
 'stpcpy' is used to concatenate a prefix, pattern, and suffix to create the appropriate line delimiter for either Markdown or MaxText.
 </p>
+<code>
+<pre>
+#include &lt;curl/curl.h&gt;
+</pre>
+</code>
 <h2>Defined types and values</h2>
 <p class='paragraph'>
 The 'int' type is typecast to a 'bool' for readability.
 </p>
+<code>
 <pre>
 typedef int bool;
 </pre>
+</code>
 <h2>Definition of booleans</h2>
 <p class='paragraph'>
 Also for readability, the booleans TRUE and FALSE are defined.
 </p>
+<code>
 <pre>
 #define FALSE 0;
 #define TRUE 1;
 </pre>
+</code>
 <h2>Global state</h2>
 <p class='paragraph'>
 The implementation has two global variables:
 if 'DEBUG' is set to 'TRUE', extra debugging lines are output to the standard error stream.
 if 'STRIP' is set to 'TRUE', extract will strip lines beginning with 'DELIMITER' from the ouput.
 </p>
+<code>
 <pre>
 static bool DEBUG = FALSE;
 static bool STRIP = FALSE;
 </pre>
+</code>
 <h2>High-level function structure</h2>
 <p class='paragraph'>
 'Extract' has a simple call-graph, which is shown below:
@@ -164,75 +183,107 @@ main
 <p class='paragraph'>
 A summary of these functions is given, then their implementation is discussed in detail.
 </p>
+<code>
 <pre>
 int main( int argc, char** argv );
 </pre>
+</code>
 <p class='paragraph'>
 The 'main' function is responsible for checking whether appropriate arguments have been passed and:
 if so, calling tryToProcess on each file and;
 if not, calling the 'usage' function.
 </p>
+<code>
 <pre>
 bool argumentsContains( int argc, char** argv, char* flag );
 </pre>
+</code>
 <p class='paragraph'>
 The 'argumentsContains' function check each of the arguments passed to main to see if it matches the specified flag.
 </p>
+<code>
 <pre>
 char* argumentsGetValue( int n, char** files, char* flag );
 </pre>
+</code>
 <p class='paragraph'>
 The 'argumentsGetValue' function retrieves (if appropriate) the value following a specific flag.
 </p>
+<code>
 <pre>
 int usage();
 </pre>
+</code>
 <p class='paragraph'>
 The 'usage' function simply prints out the usage string and always returns -1.
 </p>
+<code>
 <pre>
 void tryToProcess( char* file, const char* pattern );
 </pre>
+</code>
 <p class='paragraph'>
 The 'tryToProcess' function tries to open the passed file, and if successful passes the opened stream to
 'process' along with the passed line pattern delimiter.
 </p>
+<code>
 <pre>
 void process( FILE*, const char* pattern );
 </pre>
+</code>
 <p class='paragraph'>
 The 'process' function reads each line of the passed stream,
 and if the passed line pattern delimiter is found outputs any further lines to standard output
 until an end delimiter is encountered.
 </p>
+<code>
 <pre>
 char* readline( FILE* );
 </pre>
+</code>
 <p class='paragraph'>
 The 'readline' function reimplements the UNIX readline function for portability.
 </p>
+<code>
 <pre>
 char* generateDelimiter( const char* prefix, const char* pattern, const char* suffix );
 </pre>
+</code>
 <p class='paragraph'>
 The 'generateDelimiter' function is used to generate the line delimiter to be searched for in the input files.
 </p>
+<code>
 <pre>
 void processPreformatted( const char* line, FILE*, const char* pattern );
 </pre>
+</code>
 <p class='paragraph'>
 If the strip ('-s') flag has been used, the 'processPreformatted' function is used to strip out lines starting with specific keywords such as 'DELIMITER', or 'DROP',
 which (in the case of SQL) it is often desirous to remove for installation scripts.
 </p>
+<code>
+<pre>
+char* canonicaliseSPGenURL( char* url );
+</pre>
+</code>
+<p class='paragraph'>
+If an SPGen pattern (~spgen~) is encountered the content of the preformatted block is passed in a request
+to generate SQL.
+The 'canonicaliseSPGenURL' function is used to remove any whitespace from the URL.
+</p>
+<code>
 <pre>
 int stringEquals( const char* one, const char* two );
 </pre>
+</code>
 <p class='paragraph'>
 The 'stringEquals' function compares whether the two passed strings contain the same characters.
 </p>
+<code>
 <pre>
 int stringHasPrefix( const char* string, const char* prefix );
 </pre>
+</code>
 <p class='paragraph'>
 The 'stringHasPrefix' function determins whether the passed string has the passed prefix.
 </p>
@@ -250,9 +301,12 @@ the usage() function is called and exit is called.
 Otherwise, each file passed in the arguments is passed to the 'tryToProcess' function
 along with the specified pattern.
 </p>
+<code>
 <pre>
 int main( int argc, char** argv )
 {
+    curl_global_init( CURL_GLOBAL_ALL );
+
     char* pat = argumentsGetValue( argc, argv, "-p" );
     STRIP     = argumentsContains( argc, argv, "-s" ) ? 1 : 0;
 
@@ -292,10 +346,14 @@ int main( int argc, char** argv )
     }
     free( pat );
 
+    curl_global_cleanup();
+
     return 0;
 }
 </pre>
+</code>
 <h3>Function: argumentContains</h3>
+<code>
 <pre>
 int argumentsContains( int n, char** files, char* flag )
 {
@@ -313,7 +371,9 @@ int argumentsContains( int n, char** files, char* flag )
     return b;
 }
 </pre>
+</code>
 <h3>Function: argumentGetValue</h3>
+<code>
 <pre>
 char* argumentsGetValue( int n, char** files, char* flag )
 {
@@ -332,7 +392,9 @@ char* argumentsGetValue( int n, char** files, char* flag )
     return ret;
 }
 </pre>
+</code>
 <h3>Function: usage</h3>
+<code>
 <pre>
 int usage()
 {
@@ -340,7 +402,9 @@ int usage()
     return -1;
 }
 </pre>
+</code>
 <h3>Function: tryToProcess</h3>
+<code>
 <pre>
 void tryToProcess( char* file, const char* pattern )
 {
@@ -353,7 +417,9 @@ void tryToProcess( char* file, const char* pattern )
     }
 }
 </pre>
+</code>
 <h3>Function: process</h3>
+<code>
 <pre>
 void process( FILE* stream, const char* pattern )
 {
@@ -369,30 +435,32 @@ void process( FILE* stream, const char* pattern )
             {
             case '~':
                 line_delimiter = generateDelimiter( "~", pattern, "~" );
-
                 if ( DEBUG ) fprintf( stderr, "@%s", line );
                 processPreformatted( line, stream, line_delimiter );
+                free( line_delimiter );
                 break;
+
             case '`':
                 line_delimiter = generateDelimiter( "```", pattern, "" );
-
                 if ( ('`' == line[1]) && ('`' == line[2]) )
                 {
                     if ( DEBUG ) fprintf( stderr, "@%s", line );
                     processPreformatted( line, stream, line_delimiter );
                 }
+                free( line_delimiter );
                 break;
+
             default:
                 if ( DEBUG ) fprintf( stderr, "@%s", line );
             }
             free( line );
         }
     } while ( line );
-
-    free( line_delimiter );
 }
 </pre>
+</code>
 <h3>Function: generateDelimiter</h3>
+<code>
 <pre>
 char* generateDelimiter( const char* prefix, const char* pattern, const char* suffix )
 {
@@ -405,21 +473,30 @@ char* generateDelimiter( const char* prefix, const char* pattern, const char* su
     return delimiter;
 }
 </pre>
+</code>
 <h3>Function: processPreformatted</h3>
+<code>
 <pre>
 void processPreformatted( const char* line, FILE* stream, const char* line_delimiter )
 {
-    int   loop = 1;
-    char* pre;
+    int    loop = 1;
+    char*  pre;
+    char*  bp;
+    size_t size;
 
     FILE* dev_null = fopen( "/dev/null", "a" );
     FILE* out      = dev_null;
-    char* c        = "@";
 
     if ( stringHasPrefix( line, line_delimiter ) )
     {
-        out = stdout;
-        c   = "";
+        if ( stringEquals( "~spgen~", line_delimiter ) )
+        {
+            out = open_memstream( &bp, &size );
+        }
+        else
+        {
+            out = stdout;
+        }
     }
 
     do
@@ -435,21 +512,21 @@ void processPreformatted( const char* line, FILE* stream, const char* line_delim
                     if ( DEBUG ) fprintf( stderr, "@%s", pre );
                     loop = 0;
                     break;
+
                 case '/':
                     if ( '/' == pre[1] ) fprintf( out, ";\n" );
                     break;
+
                 case 'D':
+                case 'd':
                     if ( stringHasPrefix( pre, "DROP"      ) ) break;
                     if ( stringHasPrefix( pre, "DELIMITER" ) ) break;
-                    break;
-
-                case 'd':
                     if ( stringHasPrefix( pre, "drop"      ) ) break;
                     if ( stringHasPrefix( pre, "delimiter" ) ) break;
-                    break;
+                    // fall through
 
                 default:
-                    if ( !stringHasPrefix( c, "@" ) ) fprintf( out, "%s%s", c, pre );
+                    fprintf( out, "%s", pre );
                 }
             }
             else
@@ -462,19 +539,16 @@ void processPreformatted( const char* line, FILE* stream, const char* line_delim
                     break;
 
                 case 'D':
-                    if ( stringHasPrefix( pre, "DROP"      ) ) break;
-                    if ( stringHasPrefix( pre, "DELIMITER" ) ) break;
-                    break;
-
                 case 'd':
+                    if ( stringHasPrefix( pre, "DROP"      ) ) break;
                     if ( stringHasPrefix( pre, "drop"      ) ) break;
-                    if ( stringHasPrefix( pre, "delimiter" ) ) break;
-                    break;
+                    // fall through
 
                 default:
-                    if ( !stringHasPrefix( c, "@" ) ) fprintf( out, "%s%s", c, pre );
+                    fprintf( out, "%s", pre );
                 }
             }
+
             free( pre );
         } else {
             loop = 0;
@@ -482,19 +556,71 @@ void processPreformatted( const char* line, FILE* stream, const char* line_delim
     }
     while ( loop );
 
+    fflush( out );
+
+    if ( stringHasPrefix( line, line_delimiter ) )
+    {
+        char* host = "http://sqlgen.azurewebsites.net/api/sqlgenerate/?table_info=";
+        char* url  = calloc( strlen( host ) + size + 1, sizeof(char) );
+
+        sprintf( url, "%s%s", host, bp );
+
+        url = canonicaliseSPGenURL( url );
+
+        void* handle
+        =
+        curl_easy_init   ();
+        curl_easy_setopt ( handle, CURLOPT_URL, url );
+        //curl_easy_setopt ( handle, CURLOPT_URL, url2 );
+        curl_easy_perform( handle );
+        curl_easy_cleanup( handle );
+
+        fclose( out );
+    }
+
     fclose( dev_null );
 }
 </pre>
+</code>
+<code>
+<pre>
+char* canonicaliseSPGenURL( char* url )
+{
+    int   len       = strlen( url );
+    char* canonical = calloc( len + 1, sizeof(char) );
+
+    int index = 0;
+    for ( int i=0; i &lt; len; i++ )
+    {
+        switch ( url[i] )
+        {
+        case ' ':
+        case '\t':
+        case '\n':
+            break;
+
+        default:
+            canonical[index++] = url[i];
+        }
+    }
+
+    free( url );
+
+    return canonical;
+}
+</pre>
+</code>
 <h2>General purpose functions</h2>
 <p class='paragraph'>
 The following functions are general purpose, and can be used by any program.
 </p>
 <h3>Function: readline</h3>
+<code>
 <pre>
 char* readline( FILE* stream )
 {
     int  n     = 0;
-    int  sz    = 1024;
+    int  sz    = 10000;
     char ch[2] = { 0, 0 };
     char* line = calloc( sz + 1, sizeof( char ) );
 
@@ -504,6 +630,8 @@ char* readline( FILE* stream )
         read = fread( ch, sizeof(char), 1, stream );
         if ( read )
         {
+            if ( *ch &gt; 127 ) fprintf( stderr, "%s", "(!!)" );
+
             switch ( *ch )
             {
             case '\n':
@@ -520,6 +648,7 @@ char* readline( FILE* stream )
             {
                 sz  *= 2;
                 line = realloc( line, sz );
+                fprintf( stderr, "%s", "#" );
             }
         }
         
@@ -535,7 +664,9 @@ char* readline( FILE* stream )
     return line;
 }
 </pre>
+</code>
 <h3>Function: stringEquals</h3>
+<code>
 <pre>
 int stringEquals( const char* one, const char* two )
 {
@@ -545,7 +676,9 @@ int stringEquals( const char* one, const char* two )
     return (l1 == l2) && (0 == strncmp( one, two, l1 ));
 }
 </pre>
+</code>
 <h3>Function: stringHasPrefix</h3>
+<code>
 <pre>
 int stringHasPrefix( const char* string, const char* prefix )
 {
@@ -554,5 +687,6 @@ int stringHasPrefix( const char* string, const char* prefix )
     return (0 == strncmp( string, prefix, len ));
 }
 </pre>
+</code>
 </body>
 </html>

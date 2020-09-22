@@ -9,6 +9,30 @@
 Pre-formatted text.
 ~
 
+
+~spgen~
+table tasks
+{
+    @ORG_ID:       Int*
+    @PROJECT_ID:   Int*
+    @TASK_ID:      Int^
+    @task_name:    Text
+    @task_started: Datetime
+    @task_start:   Time
+    @task_due:     Date
+    @task_cost:    Money
+    @task_place:   Geo
+
+    %Filter   = TASK_ID;task_name
+    %Module   = tasks
+    %OrderBy  = task_name
+    %Output   = mysql
+    %Prefix   = task_
+    %Save     = task_name
+    %Security = INVOKER
+}
+~
+
 ~sql~
 CREATE TABLE orion
 (
