@@ -36,7 +36,7 @@ char* generateDelimiter( const char* prefix, const char* pattern, const char* su
 
 void processPreformatted( const char* line, FILE*, const char* pattern );
 
-char* canonicaliseSPGenURL( char* url );
+char* canonicaliseSPGenURL( const char* url );
 
 int stringEquals( const char* one, const char* two );
 
@@ -273,19 +273,24 @@ void processPreformatted( const char* line, FILE* stream, const char* line_delim
     {
         if ( stringEquals( "~spgen~", line_delimiter ) )
         {
-            char* host = "http://sqlgen.azurewebsites.net/api/sqlgenerate/?table_info=";
-            char* url  = calloc( strlen( host ) + size + 1, sizeof(char) );
+            char* host     = "http://sqlgen.azurewebsites.net/api/sqlgenerate/";
+            char* field    = "table_info=";
+            char* data     = canonicaliseSPGenURL( bp );
 
-            sprintf( url, "%s%s", host, bp );
+            void* handle   = curl_easy_init();
+            char* encoded  = curl_easy_escape( handle, data, 0 );
+            char* postdata = calloc( strlen( field ) + strlen( encoded ) + 1, sizeof(char) );
+            {
+                sprintf( postdata, "%s%s", field, encoded );
 
-            url = canonicaliseSPGenURL( url );
-
-            void* handle
-            =
-            curl_easy_init   ();
-            curl_easy_setopt ( handle, CURLOPT_URL, url );
-            curl_easy_perform( handle );
-            curl_easy_cleanup( handle );
+                curl_easy_setopt ( handle, CURLOPT_URL, host );
+                curl_easy_setopt ( handle, CURLOPT_POST, 1L );
+                curl_easy_setopt ( handle, CURLOPT_POSTFIELDS, postdata );
+                curl_easy_perform( handle );
+                curl_easy_cleanup( handle );
+            }
+            free( postdata );
+            curl_free( encoded );
 
             fclose( out );
         }
@@ -294,7 +299,7 @@ void processPreformatted( const char* line, FILE* stream, const char* line_delim
     fclose( dev_null );
 }
 
-char* canonicaliseSPGenURL( char* url )
+char* canonicaliseSPGenURL( const char* url )
 {
     int   len       = strlen( url );
     char* canonical = calloc( len + 1, sizeof(char) );
@@ -313,8 +318,6 @@ char* canonicaliseSPGenURL( char* url )
             canonical[index++] = url[i];
         }
     }
-
-    free( url );
 
     return canonical;
 }
