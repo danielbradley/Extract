@@ -2,12 +2,12 @@ arch    := $(shell uname)
 quasi   := libexec/quasi/bin/$(arch)/quasi
 curl    := curl-7.72.0
 base    := $(shell pwd)
-curldir := $(TMPDIR)/extract
+curldir := tmp
 
 all: cc md
 
 quasi: $(quasi)
-	quasi -f source/c source/mt/*.txt
+	$(quasi) -f source/c source/mt/*.txt
 
 $(quasi):
 	make -C libexec/quasi
@@ -15,19 +15,19 @@ $(quasi):
 curl: $(curldir)/$(curl) $(curldir)/$(curl)/config.status $(curldir)/$(curl)/lib/.libs/libcurl.a
 
 $(curldir)/$(curl):
-	mkdir $(curldir)
-	cd $(curldir); tar jxvf "$(base)/dep/curl-7.72.0.tar.bz2"
+	mkdir -p $(curldir)
+	cd $(curldir); tar jxvf "$(base)/dep/$(curl).tar.bz2"
 
 $(curldir)/$(curl)/config.status:
-	cd $(curldir)/$(curl); ./configure --disable-shared --enable-static
+	cd $(curldir)/$(curl); ./configure --disable-shared --enable-static --without-ldap --without-brotli
 
 $(curldir)/$(curl)/lib/.libs/libcurl.a:
 	cd $(curldir)/$(curl); make
 
 cc: quasi curl
 	mkdir  -p bin/$(arch)
-	gcc    $(curldir)/$(curl)/lib/.libs/libcurl.a -lldap -lz -o bin/$(arch)/extract       source/c/main.c
-	gcc -g $(curldir)/$(curl)/lib/.libs/libcurl.a -lldap -lz -o bin/$(arch)/extract-debug source/c/main.c
+	gcc    source/c/main.c $(curldir)/$(curl)/lib/.libs/libcurl.a -lz -I$(curldir)/$(curl)/include -o bin/$(arch)/extract
+	gcc -g source/c/main.c $(curldir)/$(curl)/lib/.libs/libcurl.a -lz -I$(curldir)/$(curl)/include -o bin/$(arch)/extract-debug
 
 md:
 	cat source/mt/*.txt | sed 's|^\.\.\.|####|g' \
@@ -51,5 +51,5 @@ maxtext:
 
 clean:
 	make -C libexec/quasi clean
-	rm -rf bin dep/curl-7.72.0
+	rm -rf bin tmp
 

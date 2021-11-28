@@ -3,3 +3,4 @@ GIT
 .DS_Store
 *~
 bin
+tmp
