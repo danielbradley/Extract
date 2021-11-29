@@ -26,8 +26,8 @@ $(curldir)/$(curl)/lib/.libs/libcurl.a:
 
 cc: quasi curl
 	mkdir  -p bin/$(arch)
-	gcc    source/c/main.c $(curldir)/$(curl)/lib/.libs/libcurl.a -lz -I$(curldir)/$(curl)/include -o bin/$(arch)/extract
-	gcc -g source/c/main.c $(curldir)/$(curl)/lib/.libs/libcurl.a -lz -I$(curldir)/$(curl)/include -o bin/$(arch)/extract-debug
+	gcc -pthread    source/c/main.c $(curldir)/$(curl)/lib/.libs/libcurl.a -lz -I$(curldir)/$(curl)/include -o bin/$(arch)/extract
+	gcc -pthread -g source/c/main.c $(curldir)/$(curl)/lib/.libs/libcurl.a -lz -I$(curldir)/$(curl)/include -o bin/$(arch)/extract-debug
 
 md:
 	cat source/mt/*.txt | sed 's|^\.\.\.|####|g' \
