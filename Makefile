@@ -35,7 +35,7 @@ $(curldir)/$(curl)/config.status:
 	cd $(curldir)/$(curl); ./configure --disable-shared --enable-static --without-ldap --without-brotli --with-nss
 
 $(curldir)/$(curl)/lib/.libs/libcurl.a:
-	cd $(curldir)/$(curl); make
+	-cd $(curldir)/$(curl); make
 
 cc: quasi curl
 	mkdir  -p bin/$(arch)
