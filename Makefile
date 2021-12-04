@@ -1,6 +1,6 @@
 arch    := $(shell uname)
 quasi   := libexec/quasi/bin/$(arch)/quasi
-curl    := curl-7.72.0
+curl    := curl-7.80.0
 base    := $(shell pwd)
 curldir := tmp
 
@@ -19,14 +19,18 @@ quasi: $(quasi)
 $(quasi):
 	make -C libexec/quasi
 
-curl: $(curldir)/$(curl) $(curldir)/$(curl)/config.status $(curldir)/$(curl)/lib/.libs/libcurl.a
+curl: $(curldir)/$(curl).tar.bz2 $(curldir)/$(curl) $(curldir)/$(curl)/config.status $(curldir)/$(curl)/lib/.libs/libcurl.a
+
+$(curldir)/$(curl).tar.bz2:
+        mkdir -p $(curldir)
+        curl https://curl.se/download/$(curl).tar.bz2 --output $(curldir)/$(curl).tar.bz2
 
 $(curldir)/$(curl):
 	mkdir -p $(curldir)
-	cd $(curldir); tar jxvf "$(base)/dep/$(curl).tar.bz2"
+	cd $(curldir); tar jxvf $(curl).tar.bz2
 
 $(curldir)/$(curl)/config.status:
-	cd $(curldir)/$(curl); ./configure --disable-shared --enable-static --without-ldap --without-brotli
+	cd $(curldir)/$(curl); ./configure --disable-shared --enable-static --without-ldap --without-brotli --with-nss
 
 $(curldir)/$(curl)/lib/.libs/libcurl.a:
 	cd $(curldir)/$(curl); make
