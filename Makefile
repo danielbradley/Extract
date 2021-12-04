@@ -4,6 +4,13 @@ curl    := curl-7.72.0
 base    := $(shell pwd)
 curldir := tmp
 
+ifeq ($(arch),Darwin)
+        LDLIBS=-lldap -lz
+else
+        LDLIBS=-lz
+endif
+
+
 all: cc md
 
 quasi: $(quasi)
@@ -26,8 +33,8 @@ $(curldir)/$(curl)/lib/.libs/libcurl.a:
 
 cc: quasi curl
 	mkdir  -p bin/$(arch)
-	gcc -pthread    source/c/main.c $(curldir)/$(curl)/lib/.libs/libcurl.a -lz -I$(curldir)/$(curl)/include -o bin/$(arch)/extract
-	gcc -pthread -g source/c/main.c $(curldir)/$(curl)/lib/.libs/libcurl.a -lz -I$(curldir)/$(curl)/include -o bin/$(arch)/extract-debug
+	gcc -pthread    source/c/main.c $(curldir)/$(curl)/lib/.libs/libcurl.a $(LDLIBS) -I$(curldir)/$(curl)/include -o bin/$(arch)/extract
+	gcc -pthread -g source/c/main.c $(curldir)/$(curl)/lib/.libs/libcurl.a $(LDLIBS) -I$(curldir)/$(curl)/include -o bin/$(arch)/extract-debug
 
 md:
 	cat source/mt/*.txt | sed 's|^\.\.\.|####|g' \
