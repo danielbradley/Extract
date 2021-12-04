@@ -7,4 +7,4 @@ bin/$(arch)/quasi:
 	cc -o bin/$(arch)/quasi source/c/quasi.c
 
 clean:
-	rm -r bin
+	rm -rf bin
