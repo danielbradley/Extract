@@ -5,9 +5,9 @@ base    := $(shell pwd)
 curldir := tmp
 
 ifeq ($(arch),Darwin)
-        LDLIBS=-lldap -lz
+	LDLIBS=-lldap -lz
 else
-        LDLIBS=-lz
+	LDLIBS=-lz
 endif
 
 
@@ -22,8 +22,8 @@ $(quasi):
 curl: $(curldir)/$(curl).tar.bz2 $(curldir)/$(curl) $(curldir)/$(curl)/config.status $(curldir)/$(curl)/lib/.libs/libcurl.a
 
 $(curldir)/$(curl).tar.bz2:
-        mkdir -p $(curldir)
-        curl https://curl.se/download/$(curl).tar.bz2 --output $(curldir)/$(curl).tar.bz2
+	mkdir -p $(curldir)
+	curl https://curl.se/download/$(curl).tar.bz2 --output $(curldir)/$(curl).tar.bz2
 
 $(curldir)/$(curl):
 	mkdir -p $(curldir)
