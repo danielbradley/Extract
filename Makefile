@@ -5,8 +5,10 @@ base    := $(shell pwd)
 curldir := tmp
 
 ifeq ($(arch),Darwin)
+	FRAMEWORKS=-framework CoreFoundation -framework SystemConfiguration
 	LDLIBS=-lldap -lz
 else
+	FRAMEWORKS=
 	LDLIBS=-lz
 endif
 
@@ -37,8 +39,8 @@ $(curldir)/$(curl)/lib/.libs/libcurl.a:
 
 cc: quasi curl
 	mkdir  -p bin/$(arch)
-	gcc -pthread    source/c/main.c $(curldir)/$(curl)/lib/.libs/libcurl.a $(LDLIBS) -I$(curldir)/$(curl)/include -o bin/$(arch)/extract
-	gcc -pthread -g source/c/main.c $(curldir)/$(curl)/lib/.libs/libcurl.a $(LDLIBS) -I$(curldir)/$(curl)/include -o bin/$(arch)/extract-debug
+	gcc $(FRAMEWORKS) -pthread    source/c/main.c $(curldir)/$(curl)/lib/.libs/libcurl.a $(LDLIBS) -I$(curldir)/$(curl)/include -o bin/$(arch)/extract
+	gcc $(FRAMEWORKS) -pthread -g source/c/main.c $(curldir)/$(curl)/lib/.libs/libcurl.a $(LDLIBS) -I$(curldir)/$(curl)/include -o bin/$(arch)/extract-debug
 
 md:
 	cat source/mt/*.txt | sed 's|^\.\.\.|####|g' \
