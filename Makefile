@@ -1,4 +1,5 @@
 arch    := $(shell uname)
+cpu     := $(shell uname -m)
 quasi   := libexec/quasi/bin/$(arch)/quasi
 curl    := curl-7.80.0
 base    := $(shell pwd)
@@ -38,9 +39,9 @@ $(curldir)/$(curl)/lib/.libs/libcurl.a:
 	-cd $(curldir)/$(curl); make
 
 cc: quasi curl
-	mkdir  -p bin/$(arch)
-	gcc $(FRAMEWORKS) -pthread    source/c/main.c $(curldir)/$(curl)/lib/.libs/libcurl.a $(LDLIBS) -I$(curldir)/$(curl)/include -o bin/$(arch)/extract
-	gcc $(FRAMEWORKS) -pthread -g source/c/main.c $(curldir)/$(curl)/lib/.libs/libcurl.a $(LDLIBS) -I$(curldir)/$(curl)/include -o bin/$(arch)/extract-debug
+	mkdir  -p bin/$(arch)-$(cpu)
+	gcc $(FRAMEWORKS) -pthread    source/c/main.c $(curldir)/$(curl)/lib/.libs/libcurl.a $(LDLIBS) -I$(curldir)/$(curl)/include -o bin/$(arch)-$(cpu)/extract
+	gcc $(FRAMEWORKS) -pthread -g source/c/main.c $(curldir)/$(curl)/lib/.libs/libcurl.a $(LDLIBS) -I$(curldir)/$(curl)/include -o bin/$(arch)-$(cpu)/extract-debug
 
 md:
 	cat source/mt/*.txt | sed 's|^\.\.\.|####|g' \
