@@ -6,7 +6,7 @@ base    := $(shell pwd)
 curldir := tmp
 
 ifeq ($(arch),Darwin)
-	FRAMEWORKS=-framework CoreFoundation -framework SystemConfiguration
+	FRAMEWORKS=-framework CoreFoundation -framework SystemConfiguration -Wdeprecated-declarations
 	LDLIBS=-lldap -lz
 else
 	FRAMEWORKS=

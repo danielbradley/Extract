@@ -1,368 +1,1025 @@
 <h1 id="extract">Extract</h1>
 <p>Daniel Bradley - daniel@crossadaptive.com</p>
-<p>Extract is Copyright 2011-2017 Daniel Robert Bradley</p>
-<p>Extract is distributed under the terms of the GNU General Public License Version 3, as is provided in the file GNU_GPL_License_v3.txt</p>
+<p>Extract is Copyright 2011-2024 Daniel Robert Bradley</p>
+<p>Extract is distributed under the terms of the GNU General Public
+License Version 3, as is provided in the file GNU_GPL_License_v3.txt</p>
 <h2 id="introduction">Introduction</h2>
-<p>'Extract' is a command line tool for extracting SQL and other code from marked up text files that are able to represent pre-formatted text sections.</p>
-<p>Currently, two such text formats are explicitly supported - Markdown and MaxText. MaxText is a plain text markup system that is similar conceptually to Markdown.</p>
+<p>“Extract” is a command line tool for extracting SQL and other code
+from marked up text files that are able to represent pre-formatted text
+sections.</p>
+<p>Currently, two such text formats are explicitly supported - Markdown
+and MaxText. MaxText is a plain text markup system that is similar
+conceptually to Markdown.</p>
 <h2 id="quick-start">Quick start</h2>
-<ol style="list-style-type: decimal">
-<li>Download Quasi from: here</li>
-<li>Compile by typing this</li>
+<ol type="1">
+<li>Download Quasi from here</li>
+<li>Compile by typing make (binary is at bin/<arch>/extract)</li>
 </ol>
 <h2 id="maxtext-versus-markdown">MaxText versus Markdown</h2>
-<p>Markdown uses a triplet of back-ticks (&quot;```&quot;) in the left-most column to indicate the start and end of a pre-formatted text section, while Maxtext uses a tilde ('~') character. While, technically, both text systems ignore any remaining text on the line, some systems such as Github, allow remaining text to hint at a programming language for syntax highlighting, and others such as Pandoc may not recognise the delimiter if there are spaces in any remaining text.</p>
-<p>'Extract' uses these superfluous characters to indicate a pattern that will be matched against a pattern passed as a common-line argument. For example, when run, the following command line matches pre-formatted sections in the specified files that contain the pattern 'tables'.</p>
+<p>Markdown uses a triplet of back-ticks (“```”) in the left-most column
+to indicate the start and end of a pre-formatted text section, while
+Maxtext uses a tilde (‘~’) character. While, technically, both text
+systems ignore any remaining text on the line, some systems such as
+Github, allow remaining text to hint at a programming language for
+syntax highlighting, and others such as Pandoc may not recognise the
+delimiter if there are spaces in any remaining text.</p>
+<p>‘Extract’ uses these superfluous characters to indicate a pattern
+that will be matched against a pattern passed as a common-line argument.
+For example, when run, the following command line matches pre-formatted
+sections in the specified files that contain the pattern ‘tables’.</p>
 <pre><code>extract -p &quot;tables&quot; source/mt/file.txt &gt; sql/tables.sql</code></pre>
-<p>When using Markdown, such a pre-formatted block would begin with a line such as:</p>
+<p>When using Markdown, such a pre-formatted block would begin with a
+line such as:</p>
 <pre><code> ```tables</code></pre>
-<p>Unfortunately, it seems like there is no pattern that can be used with both Pandoc and Github to indicate both a pattern and a file type. For example, Github will accept a delimiter such as that below and appropriately mark it up as SQL:</p>
+<p>Unfortunately, it seems like there is no pattern that can be used
+with both Pandoc and Github to indicate both a pattern and a file type.
+For example, Github will accept a delimiter such as that below and
+appropriately mark it up as SQL:</p>
 <pre><code> ```tables sql</code></pre>
-<p>However, Pandoc does not seem to accept such a delimiter, but rather will accept the following, which is not accepted by Github:</p>
+<p>However, Pandoc does not seem to accept such a delimiter, but rather
+will accept the following, which is not accepted by Github:</p>
 <pre><code> ```tables.sql</code></pre>
-<p>Therefore, if you will only be using Github you can use a pattern that has a space then 'sql', however, if you will be using Pandoc, use a pattern with no spaces in it.</p>
-<p>Hopefully, in the future one of these two systems will be modified so that they can support similar patterns.</p>
+<p>Therefore, if you will only be using Github you can use a pattern
+that has a space then ‘sql’, however, if you will be using Pandoc, use a
+pattern with no spaces in it.</p>
+<p>Hopefully, in the future one of these two systems will be modified so
+that they can support similar patterns.</p>
 <h2 id="implementation">Implementation</h2>
-<p>The following sections describe the current implementation of 'Extract'. This implementation now uses the &quot;quasi-literate programming&quot; style as described at: [https://www.quasi-literateprogramming.org]. To facilitate this implementation that now supports Markdown, the tool 'quasi' was also extended to support Markdown.</p>
-<p>Source code extracted from this file may be viewed under the 'source/c' directory.</p>
-<div class="sourceCode"><pre class="sourceCode !main.c"><code class="sourceCode c"><span class="co">/*</span>
-<span class="co"> *  !!! This document has been auto-generated using quasi !!!</span>
-<span class="co"> */</span></code></pre></div>
+<p>The following sections describe the current implementation of
+‘Extract’. This implementation now uses the “quasi-literate programming”
+style as described at: [https://www.quasi-literateprogramming.org]. To
+facilitate this implementation that now supports Markdown, the tool
+‘quasi’ was also extended to support Markdown.</p>
+<p>Source code extracted from this file may be viewed under the
+‘source/c’ directory.</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode !main.c"><code class="sourceCode c"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">/*</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="co"> *  !!! This document has been auto-generated using quasi !!!</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co"> */</span></span></code></pre></div>
 <h3 id="dependencies">Dependencies</h3>
-<p>'Extract' depends on functions declared in the following header files.</p>
-<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="pp">#include </span><span class="im">&lt;stdlib.h&gt;</span></code></pre></div>
-<p>This header is included to provide access to the 'calloc', 'realloc', and 'free' functions: 'calloc' is used to allocate memory that has been zeroed, 'realloc' is used in the 'readline' function to increase the size of the line buffer, while 'free' is used to deallocate allocated memory.</p>
-<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="pp">#include </span><span class="im">&lt;stdio.h&gt;</span></code></pre></div>
-<p>This header is included to provide access to the 'fopen', 'fclose', and 'fprintf' functions: 'fopen' is used to open the files indicated by the command-line arguments, as well as open '/dev/null', 'fclose' is used to close those files, and 'fprintf' is used to write pre-formatted text blocks to the standard output stream.</p>
-<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="pp">#include </span><span class="im">&lt;string.h&gt;</span></code></pre></div>
-<p>This header is included to provide access to the 'strdup', 'strcmp', 'strncmp', 'strlen', and 'stpcpy' functions: 'strdup' is used to duplicate the passed string, 'strcmp' and 'strncmp' are used to compare whether two strings are equal ('strcmp'), or whether one is a prefix of the other ('strncmp'). 'strlen' is used to find the length of a string, and 'stpcpy' is used to concatenate a prefix, pattern, and suffix to create the appropriate line delimiter for either Markdown or MaxText.</p>
+<p>‘Extract’ depends on functions declared in the following header
+files.</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;fcntl.h&gt;</span></span></code></pre></div>
+<p>This header is included to provide access to the ‘fcntl’ function:
+‘fcntl’ is used to make the file descriptors non-blocking.</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;stdlib.h&gt;</span></span></code></pre></div>
+<p>This header is included to provide access to the ‘calloc’, ‘realloc’,
+and ‘free’ functions: ‘calloc’ is used to allocate memory that has been
+zeroed, ‘realloc’ is used in the ‘readline’ function to increase the
+size of the line buffer, while ‘free’ is used to deallocate allocated
+memory.</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;stdio.h&gt;</span></span></code></pre></div>
+<p>This header is included to provide access to the ‘fopen’, ‘fclose’,
+and ‘fprintf’ functions: ‘fopen’ is used to open the files indicated by
+the command-line arguments, as well as open ‘/dev/null’, ‘fclose’ is
+used to close those files, and ‘fprintf’ is used to write pre-formatted
+text blocks to the standard output stream.</p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;string.h&gt;</span></span></code></pre></div>
+<p>This header is included to provide access to the ‘strdup’, ‘strcmp’,
+‘strncmp’, ‘strlen’, and ‘stpcpy’ functions: ‘strdup’ is used to
+duplicate the passed string, ‘strcmp’ and ‘strncmp’ are used to compare
+whether two strings are equal (‘strcmp’), or whether one is a prefix of
+the other (‘strncmp’). ‘strlen’ is used to find the length of a string,
+and ‘stpcpy’ is used to concatenate a prefix, pattern, and suffix to
+create the appropriate line delimiter for either Markdown or
+MaxText.</p>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;curl/curl.h&gt;</span></span></code></pre></div>
+<p>This header is included to provide access to the ‘curl’ related
+functions ‘curl_global_init’, ‘curl_global_cleanup’, ‘curl_easy_init’,
+‘curl_easy_escape’, ‘curl_easy_setopt’, ‘curl_easy_perform’,
+‘curl_easy_cleanup’, and ‘curl_free’; which are used to call the ‘spgen’
+webservice in order to translate any ‘spgen’ specifications into SQL
+statements.</p>
+<p>In the future, once ‘spgen’ as implemented as a command line
+executable, this dependency will be removed and extract will instead be
+called locally.</p>
 <h3 id="defined-types-and-values">Defined types and values</h3>
-<p>The 'int' type is typecast to a 'bool' for readability.</p>
-<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="kw">typedef</span> <span class="dt">int</span> bool;</code></pre></div>
+<p>The ‘int’ type is typecast to a ‘bool’ for readability.</p>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="kw">typedef</span> <span class="dt">int</span> <span class="dt">bool</span><span class="op">;</span></span></code></pre></div>
+<p>The ‘Patterns’ abstract data type is used to create and associated a
+buffer with each pattern.</p>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="kw">typedef</span> <span class="kw">struct</span> _Patterns Patterns<span class="op">;</span></span></code></pre></div>
 <h3 id="definition-of-booleans">Definition of booleans</h3>
 <p>Also for readability, the booleans TRUE and FALSE are defined.</p>
-<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="pp">#define FALSE 0;</span>
-<span class="pp">#define TRUE 1;</span></code></pre></div>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#define FALSE </span><span class="dv">0</span><span class="op">;</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="pp">#define TRUE </span><span class="dv">1</span><span class="op">;</span></span></code></pre></div>
 <h3 id="global-state">Global state</h3>
-<p>The implementation has two global variables: if 'DEBUG' is set to 'TRUE', extra debugging lines are output to the standard error stream. if 'STRIP' is set to 'TRUE', extract will strip lines beginning with 'DELIMITER' from the ouput.</p>
-<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">static</span> bool DEBUG = FALSE;
-<span class="dt">static</span> bool STRIP = FALSE;</code></pre></div>
-<h3 id="high-level-function-structure">High-level function structure</h3>
-<p>'Extract' has a simple call-graph, which is shown below:</p>
+<p>The implementation has the following global variables: If ‘DEBUG’ is
+set to ‘TRUE’, extra debugging lines are output to the standard error
+stream. If ‘STRIP’ is set to ‘TRUE’, extract will strip lines beginning
+with ‘DELIMITER’ from the ouput. The ‘DEV_NULL’ global variable is used
+to open the file ‘/dev/null’ to which unwanted content is printed.
+Previously, this file was being opened and closed numerous times, which
+led to execution instability.</p>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="dt">static</span> <span class="dt">bool</span>  DEBUG    <span class="op">=</span> FALSE<span class="op">;</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="dt">static</span> <span class="dt">bool</span>  STRIP    <span class="op">=</span> FALSE<span class="op">;</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="dt">static</span> <span class="dt">FILE</span><span class="op">*</span> DEV_NULL <span class="op">=</span> NULL<span class="op">;</span></span></code></pre></div>
+<h3 id="high-level-function-structure">High-level function
+structure</h3>
+<p>‘Extract’ has a simple call-graph, which is shown below:</p>
 <pre><code>main
  |-- argumentsContains -- stringEquals
  |-- argumentsGetValue -- stringEquals
  |-- usage
+ |-- Patterns_new
  |-- tryToProcess
       |-- process
            |-- readline
-           |-- generateDelimiter
            |-- processPreformatted</code></pre>
-<p>A summary of these functions is given, then their implementation is discussed in detail.</p>
-<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">int</span> main( <span class="dt">int</span> argc, <span class="dt">char</span>** argv );</code></pre></div>
-<p>The 'main' function is responsible for checking whether appropriate arguments have been passed and: if so, calling tryToProcess on each file and; if not, calling the 'usage' function.</p>
-<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c">bool argumentsContains( <span class="dt">int</span> argc, <span class="dt">char</span>** argv, <span class="dt">char</span>* flag );</code></pre></div>
-<p>The 'argumentsContains' function check each of the arguments passed to main to see if it matches the specified flag.</p>
-<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">char</span>* argumentsGetValue( <span class="dt">int</span> n, <span class="dt">char</span>** files, <span class="dt">char</span>* flag );</code></pre></div>
-<p>The 'argumentsGetValue' function retrieves (if appropriate) the value following a specific flag.</p>
-<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">int</span> usage();</code></pre></div>
-<p>The 'usage' function simply prints out the usage string and always returns -1.</p>
-<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">void</span> tryToProcess( <span class="dt">char</span>* file, <span class="dt">const</span> <span class="dt">char</span>* pattern );</code></pre></div>
-<p>The 'tryToProcess' function tries to open the passed file, and if successful passes the opened stream to 'process' along with the passed line pattern delimiter.</p>
-<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">void</span> process( FILE*, <span class="dt">const</span> <span class="dt">char</span>* pattern );</code></pre></div>
-<p>The 'process' function reads each line of the passed stream, and if the passed line pattern delimiter is found outputs any further lines to standard output until an end delimiter is encountered.</p>
-<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">char</span>* readline( FILE* );</code></pre></div>
-<p>The 'readline' function reimplements the UNIX readline function for portability.</p>
-<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">char</span>* generateDelimiter( <span class="dt">const</span> <span class="dt">char</span>* prefix, <span class="dt">const</span> <span class="dt">char</span>* pattern, <span class="dt">const</span> <span class="dt">char</span>* suffix );</code></pre></div>
-<p>The 'generateDelimiter' function is used to generate the line delimiter to be searched for in the input files.</p>
-<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">void</span> processPreformatted( <span class="dt">const</span> <span class="dt">char</span>* line, FILE*, <span class="dt">const</span> <span class="dt">char</span>* pattern );</code></pre></div>
-<p>If the strip ('-s') flag has been used, the 'processPreformatted' function is used to strip out lines starting with specific keywords such as 'DELIMITER', or 'DROP', which (in the case of SQL) it is often desirous to remove for installation scripts.</p>
-<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">int</span> stringEquals( <span class="dt">const</span> <span class="dt">char</span>* one, <span class="dt">const</span> <span class="dt">char</span>* two );</code></pre></div>
-<p>The 'stringEquals' function compares whether the two passed strings contain the same characters.</p>
-<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">int</span> stringHasPrefix( <span class="dt">const</span> <span class="dt">char</span>* string, <span class="dt">const</span> <span class="dt">char</span>* prefix );</code></pre></div>
-<p>The 'stringHasPrefix' function determins whether the passed string has the passed prefix.</p>
-<h3 id="low-level-implemention-function-descriptions">Low-level implemention function descriptions</h3>
+<p>A summary of these functions is given, then their implementation is
+discussed in detail.</p>
+<div class="sourceCode" id="cb16"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">(</span> <span class="dt">int</span> argc<span class="op">,</span> <span class="dt">char</span><span class="op">**</span> argv <span class="op">);</span></span></code></pre></div>
+<p>The ‘main’ function is responsible for checking whether appropriate
+arguments have been passed and: if so, calling tryToProcess on each
+file, or; if not, calling the ‘usage’ function then exiting.</p>
+<div class="sourceCode" id="cb17"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="dt">bool</span> argumentsContains<span class="op">(</span> <span class="dt">int</span> argc<span class="op">,</span> <span class="dt">char</span><span class="op">**</span> argv<span class="op">,</span> <span class="dt">char</span><span class="op">*</span> flag <span class="op">);</span></span></code></pre></div>
+<p>The ‘argumentsContains’ function check each of the arguments passed
+to main to see if it matches the specified flag.</p>
+<div class="sourceCode" id="cb18"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="dt">char</span><span class="op">*</span> argumentsGetValue    <span class="op">(</span> <span class="dt">int</span> n<span class="op">,</span> <span class="dt">char</span><span class="op">**</span> files<span class="op">,</span> <span class="dt">char</span><span class="op">*</span> flag <span class="op">);</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="dt">char</span><span class="op">*</span> argumentsGetValueList<span class="op">(</span> <span class="dt">int</span> n<span class="op">,</span> <span class="dt">char</span><span class="op">**</span> files<span class="op">,</span> <span class="dt">char</span><span class="op">*</span> flag <span class="op">);</span></span></code></pre></div>
+<p>Extract now supports either: the original mode where the flag ‘-p’ is
+passed followed by a single pattern; or a new multi-pattern mode where
+‘-P’ is passed followed by a list of patterns. Thus each execution of
+‘extract’ can now extract the content of multiple patterns while only
+processing files once.</p>
+<p>The ‘argumentsGetValue’ function retrieves (if appropriate) the value
+following a specific flag. The ‘argumentsGetValueList’ returns a comma
+separated list of arguments that follow a flag and are terminated by the
+argument ‘–’.</p>
+<div class="sourceCode" id="cb19"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> usage<span class="op">();</span></span></code></pre></div>
+<p>The ‘usage’ function simply prints out the usage string and always
+returns -1.</p>
+<div class="sourceCode" id="cb20"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>Patterns<span class="op">*</span> Patterns_Populate<span class="op">(</span> <span class="dt">const</span> <span class="dt">char</span><span class="op">*</span> patterns <span class="op">);</span></span></code></pre></div>
+<p>The ‘Patterns_Populate’ function takes a comma-separated list of one
+or more patterns and initialised the ‘Patterns’ structure which
+maintains:</p>
+<ol type="1">
+<li>An array of pattern names</li>
+<li>An array of corresponding memstream objects</li>
+<li>An array of memory buffers</li>
+<li>An array of mem sizes</li>
+<li>The value ‘next’, which is used during population of the
+structure</li>
+<li>The value ‘max’, which is keeps track of the total number of
+patterns that were passed.</li>
+</ol>
+<div class="sourceCode" id="cb21"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>Patterns<span class="op">*</span> Patterns_new<span class="op">(</span> <span class="dt">int</span> maxSize <span class="op">);</span></span></code></pre></div>
+<p>The function ‘Patterns_new’ is used to initialise the Patterns
+object.</p>
+<div class="sourceCode" id="cb22"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> Patterns_add<span class="op">(</span> Patterns<span class="op">*</span> self<span class="op">,</span> <span class="dt">const</span> <span class="dt">char</span><span class="op">*</span> pattern <span class="op">);</span></span></code></pre></div>
+<p>The function ‘Patterns_add’ is used to populate each array with an
+entry corresponding to that pattern added.</p>
+<div class="sourceCode" id="cb23"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="dt">FILE</span><span class="op">*</span> Patterns_retrieveOutputStream<span class="op">(</span> Patterns<span class="op">*</span> self<span class="op">,</span> <span class="dt">const</span> <span class="dt">char</span><span class="op">*</span> pattern <span class="op">);</span></span></code></pre></div>
+<p>Later the ‘Patterns_retrieveOutputStream’ function is used to
+retrieve the mem stream associated with a pattern.</p>
+<div class="sourceCode" id="cb24"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> tryToProcess<span class="op">(</span> <span class="dt">char</span><span class="op">*</span> file<span class="op">,</span> Patterns<span class="op">*</span> p <span class="op">);</span></span></code></pre></div>
+<p>The ‘tryToProcess’ function tries to open the passed file, and if
+successful passes the opened input stream to ‘process’ along with the
+passed line pattern delimiter.</p>
+<div class="sourceCode" id="cb25"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> process<span class="op">(</span> <span class="dt">FILE</span><span class="op">*</span> stream<span class="op">,</span> Patterns<span class="op">*</span> p <span class="op">);</span></span></code></pre></div>
+<p>The ‘process’ function reads each line of the passed stream, and if
+the passed line pattern delimiter is found outputs any further lines to
+the mem stream associated with that pattern until an end delimiter is
+encountered.</p>
+<div class="sourceCode" id="cb26"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="dt">char</span><span class="op">*</span> readline<span class="op">(</span> <span class="dt">FILE</span><span class="op">*</span> <span class="op">);</span></span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a><span class="dt">char</span><span class="op">*</span> readline2<span class="op">(</span> <span class="dt">FILE</span><span class="op">*</span> <span class="op">);</span></span></code></pre></div>
+<p>The ‘readline’ function reimplements the UNIX readline function for
+portability.</p>
+<p>!</p>
+<pre><code>char* generateDelimiter( const char* prefix, const char* pattern, const char* suffix );</code></pre>
+<p>The ‘generateDelimiter’ function is used to generate the line
+delimiter to be searched for in the input files. !</p>
+<div class="sourceCode" id="cb28"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> processPreformatted<span class="op">(</span> <span class="dt">const</span> <span class="dt">char</span><span class="op">*</span> line<span class="op">,</span> <span class="dt">FILE</span><span class="op">*</span> stream<span class="op">,</span> Patterns<span class="op">*</span> p <span class="op">);</span></span></code></pre></div>
+<p>If the strip (‘-s’) flag has been used, the ‘processPreformatted’
+function is used to strip out lines starting with specific keywords such
+as ‘DELIMITER’, or ‘DROP’, which (in the case of SQL) it is often
+desirous to remove for installation scripts.</p>
+<div class="sourceCode" id="cb29"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="dt">char</span><span class="op">*</span> extractPattern<span class="op">(</span> <span class="dt">const</span> <span class="dt">char</span><span class="op">*</span> line <span class="op">);</span></span></code></pre></div>
+<p>The ‘extractPattern’ function is used to extract a pattern from the
+first line of a pre-formatted text section.</p>
+<div class="sourceCode" id="cb30"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="dt">char</span><span class="op">*</span> canonicaliseSPGenURL<span class="op">(</span> <span class="dt">const</span> <span class="dt">char</span><span class="op">*</span> url <span class="op">);</span></span></code></pre></div>
+<p>If an SPGen pattern (<sub>spgen</sub>) is encountered the content of
+the preformatted block is passed in a request to generate SQL. The
+‘canonicaliseSPGenURL’ function is used to remove any whitespace from
+the URL.</p>
+<div class="sourceCode" id="cb31"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="dt">char</span><span class="op">*</span> stringAppend<span class="op">(</span> <span class="dt">char</span><span class="op">*</span> orig<span class="op">,</span> <span class="dt">char</span> sep<span class="op">,</span> <span class="dt">const</span> <span class="dt">char</span><span class="op">*</span> suffix <span class="op">);</span></span></code></pre></div>
+<p>The ‘stringAppend’ function concatenates two strings and returns a
+pointer to a combined string.</p>
+<div class="sourceCode" id="cb32"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> stringEquals<span class="op">(</span> <span class="dt">const</span> <span class="dt">char</span><span class="op">*</span> one<span class="op">,</span> <span class="dt">const</span> <span class="dt">char</span><span class="op">*</span> two <span class="op">);</span></span></code></pre></div>
+<p>The ‘stringEquals’ function compares whether the two passed strings
+contain the same characters.</p>
+<div class="sourceCode" id="cb33"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="dt">char</span><span class="op">*</span> stringCopy<span class="op">(</span> <span class="dt">const</span> <span class="dt">char</span><span class="op">*</span> src <span class="op">);</span></span></code></pre></div>
+<p>The ‘stringCopy’ function copies and returns a string.</p>
+<div class="sourceCode" id="cb34"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> stringHasPrefix<span class="op">(</span> <span class="dt">const</span> <span class="dt">char</span><span class="op">*</span> string<span class="op">,</span> <span class="dt">const</span> <span class="dt">char</span><span class="op">*</span> prefix <span class="op">);</span></span></code></pre></div>
+<p>The ‘stringHasPrefix’ function determins whether the passed string
+has the passed prefix.</p>
+<div class="sourceCode" id="cb35"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> Patterns_printMemstreamsTo<span class="op">(</span> Patterns<span class="op">*</span> p<span class="op">,</span> <span class="dt">FILE</span><span class="op">*</span> out <span class="op">);</span></span></code></pre></div>
+<p>The ‘Patterns_printMemstreamsTo’ function will write the content of
+all memory streams to standard out.</p>
+<div class="sourceCode" id="cb36"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>Patterns<span class="op">*</span> Patterns_free<span class="op">(</span> Patterns<span class="op">*</span> self <span class="op">);</span></span></code></pre></div>
+<p>The ‘Patterns_free’ function releases all memory allocatted related
+to patterns.</p>
+<h3 id="low-level-implemention-function-descriptions">Low-level
+implemention function descriptions</h3>
 <h4 id="function-main">Function: main</h4>
-<p>The main function first processes the passed arguments to retrieve the pattern, and to determine whether the <em>strip</em> flag has been passed, e.g., ('-s').</p>
-<p>If a pattern has not been passed, or the number of arguments passed are less than expected, the usage() function is called and exit is called.</p>
-<p>Otherwise, each file passed in the arguments is passed to the 'tryToProcess' function along with the specified pattern.</p>
-<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">int</span> main( <span class="dt">int</span> argc, <span class="dt">char</span>** argv )
-{
-    <span class="dt">char</span>* pat = argumentsGetValue( argc, argv, <span class="st">&quot;-p&quot;</span> );
-    STRIP     = argumentsContains( argc, argv, <span class="st">&quot;-s&quot;</span> ) ? <span class="dv">1</span> : <span class="dv">0</span>;
-
-                                        <span class="co">// 1.       2.  3.  4.            5.</span>
-    <span class="dt">int</span> expected_arguments = <span class="dv">4</span> + STRIP; <span class="co">// extract [-s] -p &quot;some pattern&quot; file...</span>
-
-    <span class="cf">if</span> ( ! pat )
-    {
-        exit( usage() );
-    }
-    <span class="cf">else</span>
-    <span class="cf">if</span> ( argc &lt; expected_arguments )
-    {
-        exit( usage() );
-    }
-    <span class="cf">else</span>
-    {
-        <span class="co">//</span>
-        <span class="co">//  Must try to process each arg that does not start with &#39;-&#39;, except:</span>
-        <span class="co">//  argv[0], which is process name, and</span>
-        <span class="co">//  argv[?], pattern which follows &#39;-p&#39;.</span>
-        <span class="co">//</span>
-
-        <span class="dt">int</span> i;
-        <span class="cf">for</span> ( i = <span class="dv">1</span>; i &lt; argc; i++ )
-        {
-            <span class="cf">if</span> ( <span class="ch">&#39;-&#39;</span> != argv[i][<span class="dv">0</span>] )
-            {
-                tryToProcess( argv[i], pat );
-            }
-            <span class="cf">else</span>
-            <span class="cf">if</span> ( <span class="ch">&#39;p&#39;</span> == argv[i][<span class="dv">1</span>] )
-            {
-                i++;
-            }
-        }
-    }
-    free( pat );
-
-    <span class="cf">return</span> <span class="dv">0</span>;
-}</code></pre></div>
+<p>The main function first processes the passed arguments to retrieve
+the pattern, and to determine whether the <em>strip</em> flag has been
+passed, e.g., (‘-s’). The caller may either pass a lower case ‘p’ flag
+followed by a pattern ( ‘-p <pattern>’ ), or an uppercase ‘P’ flag
+followed by a list of patterns terminated by a ‘–’ argument.</p>
+<p>If a pattern has not been passed, or the number of arguments passed
+are less than expected, the usage() function is called and exit is
+called.</p>
+<p>Otherwise, each file path in the arguments is passed to the
+‘tryToProcess’ function along with the Patterns object.</p>
+<div class="sourceCode" id="cb37"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">(</span> <span class="dt">int</span> argc<span class="op">,</span> <span class="dt">char</span><span class="op">**</span> argv <span class="op">)</span></span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>    curl_global_init<span class="op">(</span> CURL_GLOBAL_ALL <span class="op">);</span></span>
+<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a>    DEV_NULL  <span class="op">=</span> fopen<span class="op">(</span> <span class="st">&quot;/dev/null&quot;</span><span class="op">,</span> <span class="st">&quot;a&quot;</span> <span class="op">);</span></span>
+<span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a>    STRIP     <span class="op">=</span> argumentsContains<span class="op">(</span> argc<span class="op">,</span> argv<span class="op">,</span> <span class="st">&quot;-s&quot;</span> <span class="op">)</span> <span class="op">?</span> <span class="dv">1</span> <span class="op">:</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb37-7"><a href="#cb37-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">char</span><span class="op">*</span> pat <span class="op">=</span> argumentsGetValue<span class="op">(</span> argc<span class="op">,</span> argv<span class="op">,</span> <span class="st">&quot;-p&quot;</span> <span class="op">);</span></span>
+<span id="cb37-8"><a href="#cb37-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-9"><a href="#cb37-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span> <span class="op">!</span>pat <span class="op">)</span></span>
+<span id="cb37-10"><a href="#cb37-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb37-11"><a href="#cb37-11" aria-hidden="true" tabindex="-1"></a>        pat <span class="op">=</span> argumentsGetValueList<span class="op">(</span> argc<span class="op">,</span> argv<span class="op">,</span> <span class="st">&quot;-P&quot;</span> <span class="op">);</span></span>
+<span id="cb37-12"><a href="#cb37-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb37-13"><a href="#cb37-13" aria-hidden="true" tabindex="-1"></a>                                        <span class="co">// 1.       2.  3.  4.            5.</span></span>
+<span id="cb37-14"><a href="#cb37-14" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> expected_arguments <span class="op">=</span> <span class="dv">4</span> <span class="op">+</span> STRIP<span class="op">;</span> <span class="co">// extract [-s] -p &quot;some patterns&quot; file...</span></span>
+<span id="cb37-15"><a href="#cb37-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-16"><a href="#cb37-16" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span> <span class="op">!</span> pat <span class="op">)</span></span>
+<span id="cb37-17"><a href="#cb37-17" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb37-18"><a href="#cb37-18" aria-hidden="true" tabindex="-1"></a>        exit<span class="op">(</span> usage<span class="op">()</span> <span class="op">);</span></span>
+<span id="cb37-19"><a href="#cb37-19" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb37-20"><a href="#cb37-20" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span></span>
+<span id="cb37-21"><a href="#cb37-21" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span> argc <span class="op">&lt;</span> expected_arguments <span class="op">)</span></span>
+<span id="cb37-22"><a href="#cb37-22" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb37-23"><a href="#cb37-23" aria-hidden="true" tabindex="-1"></a>        exit<span class="op">(</span> usage<span class="op">()</span> <span class="op">);</span></span>
+<span id="cb37-24"><a href="#cb37-24" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb37-25"><a href="#cb37-25" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span></span>
+<span id="cb37-26"><a href="#cb37-26" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb37-27"><a href="#cb37-27" aria-hidden="true" tabindex="-1"></a>        <span class="co">//</span></span>
+<span id="cb37-28"><a href="#cb37-28" aria-hidden="true" tabindex="-1"></a>        <span class="co">//  Must try to process each arg that does not start with &#39;-&#39;, except:</span></span>
+<span id="cb37-29"><a href="#cb37-29" aria-hidden="true" tabindex="-1"></a>        <span class="co">//  argv[0], which is process name, and</span></span>
+<span id="cb37-30"><a href="#cb37-30" aria-hidden="true" tabindex="-1"></a>        <span class="co">//  argv[?], pattern which follows &#39;-p&#39;.</span></span>
+<span id="cb37-31"><a href="#cb37-31" aria-hidden="true" tabindex="-1"></a>        <span class="co">//</span></span>
+<span id="cb37-32"><a href="#cb37-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-33"><a href="#cb37-33" aria-hidden="true" tabindex="-1"></a>        Patterns<span class="op">*</span> p <span class="op">=</span> Patterns_Populate<span class="op">(</span> pat <span class="op">);</span></span>
+<span id="cb37-34"><a href="#cb37-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-35"><a href="#cb37-35" aria-hidden="true" tabindex="-1"></a>        <span class="dt">int</span> i<span class="op">;</span></span>
+<span id="cb37-36"><a href="#cb37-36" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> <span class="op">(</span> i <span class="op">=</span> <span class="dv">1</span><span class="op">;</span> i <span class="op">&lt;</span> argc<span class="op">;</span> i<span class="op">++</span> <span class="op">)</span></span>
+<span id="cb37-37"><a href="#cb37-37" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb37-38"><a href="#cb37-38" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> <span class="op">(</span> <span class="ch">&#39;-&#39;</span> <span class="op">!=</span> argv<span class="op">[</span>i<span class="op">][</span><span class="dv">0</span><span class="op">]</span> <span class="op">)</span></span>
+<span id="cb37-39"><a href="#cb37-39" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb37-40"><a href="#cb37-40" aria-hidden="true" tabindex="-1"></a>                tryToProcess<span class="op">(</span> argv<span class="op">[</span>i<span class="op">],</span> p <span class="op">);</span></span>
+<span id="cb37-41"><a href="#cb37-41" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb37-42"><a href="#cb37-42" aria-hidden="true" tabindex="-1"></a>            <span class="cf">else</span></span>
+<span id="cb37-43"><a href="#cb37-43" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> <span class="op">(</span> <span class="ch">&#39;p&#39;</span> <span class="op">==</span> argv<span class="op">[</span>i<span class="op">][</span><span class="dv">1</span><span class="op">]</span> <span class="op">)</span></span>
+<span id="cb37-44"><a href="#cb37-44" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb37-45"><a href="#cb37-45" aria-hidden="true" tabindex="-1"></a>                i<span class="op">++;</span></span>
+<span id="cb37-46"><a href="#cb37-46" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb37-47"><a href="#cb37-47" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb37-48"><a href="#cb37-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-49"><a href="#cb37-49" aria-hidden="true" tabindex="-1"></a>        Patterns_printMemstreamsTo<span class="op">(</span> p<span class="op">,</span> stdout <span class="op">);</span></span>
+<span id="cb37-50"><a href="#cb37-50" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb37-51"><a href="#cb37-51" aria-hidden="true" tabindex="-1"></a>        Patterns_free<span class="op">(</span> p <span class="op">);</span></span>
+<span id="cb37-52"><a href="#cb37-52" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb37-53"><a href="#cb37-53" aria-hidden="true" tabindex="-1"></a>    free<span class="op">(</span> pat <span class="op">);</span></span>
+<span id="cb37-54"><a href="#cb37-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-55"><a href="#cb37-55" aria-hidden="true" tabindex="-1"></a>    curl_global_cleanup<span class="op">();</span></span>
+<span id="cb37-56"><a href="#cb37-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-57"><a href="#cb37-57" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb37-58"><a href="#cb37-58" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <h4 id="function-argumentcontains">Function: argumentContains</h4>
-<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">int</span> argumentsContains( <span class="dt">int</span> n, <span class="dt">char</span>** files, <span class="dt">char</span>* flag )
-{
-    <span class="dt">int</span> b = <span class="dv">0</span>;
-    <span class="dt">int</span> i;
-
-    <span class="cf">for</span> ( i=<span class="dv">0</span>; i &lt; n; i++ )
-    {
-        <span class="cf">if</span> ( stringEquals( flag, files[i] ) )
-        {
-            b = <span class="dv">1</span>;
-            i = n;
-        }
-    }
-    <span class="cf">return</span> b;
-}</code></pre></div>
+<p>The ‘argumentContains’ function iterates through the passed arguments
+and returns TRUE if the argument is found; otherwise FALSE.</p>
+<div class="sourceCode" id="cb38"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> argumentsContains<span class="op">(</span> <span class="dt">int</span> n<span class="op">,</span> <span class="dt">char</span><span class="op">**</span> files<span class="op">,</span> <span class="dt">char</span><span class="op">*</span> flag <span class="op">)</span></span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> b <span class="op">=</span> FALSE<span class="op">;</span></span>
+<span id="cb38-4"><a href="#cb38-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> i<span class="op">;</span></span>
+<span id="cb38-5"><a href="#cb38-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb38-6"><a href="#cb38-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="op">(</span> i<span class="op">=</span><span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> n<span class="op">;</span> i<span class="op">++</span> <span class="op">)</span></span>
+<span id="cb38-7"><a href="#cb38-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb38-8"><a href="#cb38-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span> stringEquals<span class="op">(</span> flag<span class="op">,</span> files<span class="op">[</span>i<span class="op">]</span> <span class="op">)</span> <span class="op">)</span></span>
+<span id="cb38-9"><a href="#cb38-9" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb38-10"><a href="#cb38-10" aria-hidden="true" tabindex="-1"></a>            b <span class="op">=</span> TRUE<span class="op">;</span></span>
+<span id="cb38-11"><a href="#cb38-11" aria-hidden="true" tabindex="-1"></a>            i <span class="op">=</span> n<span class="op">;</span></span>
+<span id="cb38-12"><a href="#cb38-12" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb38-13"><a href="#cb38-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb38-14"><a href="#cb38-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> b<span class="op">;</span></span>
+<span id="cb38-15"><a href="#cb38-15" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <h4 id="function-argumentgetvalue">Function: argumentGetValue</h4>
-<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">char</span>* argumentsGetValue( <span class="dt">int</span> n, <span class="dt">char</span>** files, <span class="dt">char</span>* flag )
-{
-    <span class="dt">char</span>* ret = NULL;
-    <span class="dt">int</span> i;
-
-    <span class="cf">for</span> ( i=<span class="dv">0</span>; i &lt; n; i++ )
-    {
-        <span class="cf">if</span> ( stringEquals( flag, files[i] ) )
-        {
-            i++;
-            <span class="cf">if</span> ( i &lt; n) ret = strdup( files[i] );
-            i = n;
-        }
-    }
-    <span class="cf">return</span> ret;
-}</code></pre></div>
+<p>The ‘argumentGetValue’ function iterates through the passed arguments
+and if the passed flag is found returns the following argument;
+otherwise returns NULL.</p>
+<div class="sourceCode" id="cb39"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="dt">char</span><span class="op">*</span> argumentsGetValue<span class="op">(</span> <span class="dt">int</span> n<span class="op">,</span> <span class="dt">char</span><span class="op">**</span> files<span class="op">,</span> <span class="dt">char</span><span class="op">*</span> flag <span class="op">)</span></span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">char</span><span class="op">*</span> ret <span class="op">=</span> NULL<span class="op">;</span></span>
+<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> i<span class="op">;</span></span>
+<span id="cb39-5"><a href="#cb39-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-6"><a href="#cb39-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="op">(</span> i<span class="op">=</span><span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> n<span class="op">;</span> i<span class="op">++</span> <span class="op">)</span></span>
+<span id="cb39-7"><a href="#cb39-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb39-8"><a href="#cb39-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span> stringEquals<span class="op">(</span> flag<span class="op">,</span> files<span class="op">[</span>i<span class="op">]</span> <span class="op">)</span> <span class="op">)</span></span>
+<span id="cb39-9"><a href="#cb39-9" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb39-10"><a href="#cb39-10" aria-hidden="true" tabindex="-1"></a>            i<span class="op">++;</span></span>
+<span id="cb39-11"><a href="#cb39-11" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> <span class="op">(</span> i <span class="op">&lt;</span> n<span class="op">)</span> ret <span class="op">=</span> strdup<span class="op">(</span> files<span class="op">[</span>i<span class="op">]</span> <span class="op">);</span></span>
+<span id="cb39-12"><a href="#cb39-12" aria-hidden="true" tabindex="-1"></a>            i <span class="op">=</span> n<span class="op">;</span></span>
+<span id="cb39-13"><a href="#cb39-13" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb39-14"><a href="#cb39-14" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb39-15"><a href="#cb39-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> ret<span class="op">;</span></span>
+<span id="cb39-16"><a href="#cb39-16" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="function-argumentsgetvaluelist">Function:
+argumentsGetValueList</h4>
+<p>The ‘argumentsGetValueList’ function iterates through the passed
+arguments and if the passed flag is found returns each of the following
+arguments until a ‘–’ argument is found as a comma separated string;
+otherwise returns NULL.</p>
+<div class="sourceCode" id="cb40"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="dt">char</span><span class="op">*</span> argumentsGetValueList<span class="op">(</span> <span class="dt">int</span> n<span class="op">,</span> <span class="dt">char</span><span class="op">**</span> files<span class="op">,</span> <span class="dt">char</span><span class="op">*</span> flag <span class="op">)</span></span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">char</span><span class="op">*</span> ret <span class="op">=</span> NULL<span class="op">;</span></span>
+<span id="cb40-4"><a href="#cb40-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> i<span class="op">;</span></span>
+<span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-6"><a href="#cb40-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="op">(</span> i<span class="op">=</span><span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> n<span class="op">;</span> i<span class="op">++</span> <span class="op">)</span></span>
+<span id="cb40-7"><a href="#cb40-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb40-8"><a href="#cb40-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span> stringEquals<span class="op">(</span> flag<span class="op">,</span> files<span class="op">[</span>i<span class="op">]</span> <span class="op">)</span> <span class="op">)</span></span>
+<span id="cb40-9"><a href="#cb40-9" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb40-10"><a href="#cb40-10" aria-hidden="true" tabindex="-1"></a>            i<span class="op">++;</span></span>
+<span id="cb40-11"><a href="#cb40-11" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> <span class="op">(</span> i<span class="op">=</span>i<span class="op">;</span> i <span class="op">&lt;</span> n<span class="op">;</span> i<span class="op">++</span> <span class="op">)</span></span>
+<span id="cb40-12"><a href="#cb40-12" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb40-13"><a href="#cb40-13" aria-hidden="true" tabindex="-1"></a>                <span class="cf">if</span> <span class="op">(</span> stringEquals<span class="op">(</span> <span class="st">&quot;--&quot;</span><span class="op">,</span> files<span class="op">[</span>i<span class="op">]</span> <span class="op">)</span> <span class="op">)</span></span>
+<span id="cb40-14"><a href="#cb40-14" aria-hidden="true" tabindex="-1"></a>                <span class="op">{</span></span>
+<span id="cb40-15"><a href="#cb40-15" aria-hidden="true" tabindex="-1"></a>                    i <span class="op">=</span> n<span class="op">;</span></span>
+<span id="cb40-16"><a href="#cb40-16" aria-hidden="true" tabindex="-1"></a>                <span class="op">}</span></span>
+<span id="cb40-17"><a href="#cb40-17" aria-hidden="true" tabindex="-1"></a>                <span class="cf">else</span></span>
+<span id="cb40-18"><a href="#cb40-18" aria-hidden="true" tabindex="-1"></a>                <span class="op">{</span></span>
+<span id="cb40-19"><a href="#cb40-19" aria-hidden="true" tabindex="-1"></a>                    ret <span class="op">=</span> stringAppend<span class="op">(</span> ret<span class="op">,</span> <span class="ch">&#39;,&#39;</span><span class="op">,</span> files<span class="op">[</span>i<span class="op">]</span> <span class="op">);</span></span>
+<span id="cb40-20"><a href="#cb40-20" aria-hidden="true" tabindex="-1"></a>                <span class="op">}</span></span>
+<span id="cb40-21"><a href="#cb40-21" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb40-22"><a href="#cb40-22" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb40-23"><a href="#cb40-23" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb40-24"><a href="#cb40-24" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> ret<span class="op">;</span></span>
+<span id="cb40-25"><a href="#cb40-25" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <h4 id="function-usage">Function: usage</h4>
-<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">int</span> usage()
-{
-    fprintf( stderr, <span class="st">&quot;Usage:</span><span class="sc">\n\t</span><span class="st">extract [-s] -p &lt;pattern&gt; &lt;file&gt; [more files] [ &gt; output file ]</span><span class="sc">\n</span><span class="st">&quot;</span> );
-    <span class="cf">return</span> -<span class="dv">1</span>;
-}</code></pre></div>
+<p>The ‘usage’ function prints out expected usage to standard error.</p>
+<div class="sourceCode" id="cb41"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> usage<span class="op">()</span></span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a>    fprintf<span class="op">(</span> stderr<span class="op">,</span> <span class="st">&quot;Usage:</span><span class="sc">\n\t</span><span class="st">extract [-s] [-p &lt;pattern&gt;] [-P &lt;pattens,...,&#39;--&#39;&gt;] [source file,...]</span><span class="sc">\n</span><span class="st">&quot;</span> <span class="op">);</span></span>
+<span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="op">-</span><span class="dv">1</span><span class="op">;</span></span>
+<span id="cb41-5"><a href="#cb41-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <h4 id="function-trytoprocess">Function: tryToProcess</h4>
-<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">void</span> tryToProcess( <span class="dt">char</span>* file, <span class="dt">const</span> <span class="dt">char</span>* pattern )
-{
-    FILE* stream;
-    <span class="cf">if</span> ( (stream = fopen( file, <span class="st">&quot;r&quot;</span> )) )
-    {
-        <span class="cf">if</span> ( DEBUG ) fprintf( stderr, <span class="st">&quot;Processing: %s</span><span class="sc">\n</span><span class="st">&quot;</span>, file );
-        process( stream, pattern );
-        fclose( stream );
-    }
-}</code></pre></div>
+<p>The ‘tryToProcess’ function attempts to open the passed file path and
+if successful passes the opened file stream and patterns to the
+‘process’ function.</p>
+<div class="sourceCode" id="cb42"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> tryToProcess<span class="op">(</span> <span class="dt">char</span><span class="op">*</span> file<span class="op">,</span> Patterns<span class="op">*</span> p <span class="op">)</span></span>
+<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">FILE</span><span class="op">*</span> stream <span class="op">=</span> NULL<span class="op">;</span></span>
+<span id="cb42-4"><a href="#cb42-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span> <span class="op">(</span>stream <span class="op">=</span> fopen<span class="op">(</span> file<span class="op">,</span> <span class="st">&quot;r&quot;</span> <span class="op">))</span> <span class="op">)</span></span>
+<span id="cb42-5"><a href="#cb42-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb42-6"><a href="#cb42-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span> DEBUG <span class="op">)</span> fprintf<span class="op">(</span> stderr<span class="op">,</span> <span class="st">&quot;Processing: </span><span class="sc">%s\n</span><span class="st">&quot;</span><span class="op">,</span> file <span class="op">);</span></span>
+<span id="cb42-7"><a href="#cb42-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb42-8"><a href="#cb42-8" aria-hidden="true" tabindex="-1"></a>        process<span class="op">(</span> stream<span class="op">,</span> p <span class="op">);</span></span>
+<span id="cb42-9"><a href="#cb42-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb42-10"><a href="#cb42-10" aria-hidden="true" tabindex="-1"></a>        fclose<span class="op">(</span> stream <span class="op">);</span></span>
+<span id="cb42-11"><a href="#cb42-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb42-12"><a href="#cb42-12" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <h4 id="function-process">Function: process</h4>
-<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">void</span> process( FILE* stream, <span class="dt">const</span> <span class="dt">char</span>* pattern )
+<p>The process function reads each line of passed input stream using the
+‘readline’ function. If a line starts with a tilde (‘~’) or with a
+Markdown comment prefix (‘```’), the line, stream, and patterns are
+passed to ‘processPreformatted’, which will process each line until an
+end delimiter is found.</p>
+<div class="sourceCode" id="cb43"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> process<span class="op">(</span> <span class="dt">FILE</span><span class="op">*</span> stream<span class="op">,</span> Patterns<span class="op">*</span> p <span class="op">)</span></span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">char</span><span class="op">*</span> line<span class="op">;</span></span>
+<span id="cb43-4"><a href="#cb43-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span>   use_new <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb43-5"><a href="#cb43-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb43-6"><a href="#cb43-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">do</span></span>
+<span id="cb43-7"><a href="#cb43-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb43-8"><a href="#cb43-8" aria-hidden="true" tabindex="-1"></a>        line <span class="op">=</span> readline<span class="op">(</span> stream <span class="op">);</span></span>
+<span id="cb43-9"><a href="#cb43-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span> line <span class="op">)</span></span>
+<span id="cb43-10"><a href="#cb43-10" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb43-11"><a href="#cb43-11" aria-hidden="true" tabindex="-1"></a>            <span class="cf">switch</span> <span class="op">(</span> line<span class="op">[</span><span class="dv">0</span><span class="op">]</span> <span class="op">)</span></span>
+<span id="cb43-12"><a href="#cb43-12" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb43-13"><a href="#cb43-13" aria-hidden="true" tabindex="-1"></a>            <span class="cf">case</span> <span class="ch">&#39;~&#39;</span><span class="op">:</span></span>
+<span id="cb43-14"><a href="#cb43-14" aria-hidden="true" tabindex="-1"></a>                <span class="cf">if</span> <span class="op">(</span> DEBUG <span class="op">)</span> fprintf<span class="op">(</span> stderr<span class="op">,</span> <span class="st">&quot;@</span><span class="sc">%s</span><span class="st">&quot;</span><span class="op">,</span> line <span class="op">);</span></span>
+<span id="cb43-15"><a href="#cb43-15" aria-hidden="true" tabindex="-1"></a>                <span class="cf">if</span> <span class="op">(</span> <span class="dv">1</span> <span class="op">)</span> processPreformatted<span class="op">(</span> line<span class="op">,</span> stream<span class="op">,</span> p <span class="op">);</span></span>
+<span id="cb43-16"><a href="#cb43-16" aria-hidden="true" tabindex="-1"></a>                <span class="cf">break</span><span class="op">;</span></span>
+<span id="cb43-17"><a href="#cb43-17" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb43-18"><a href="#cb43-18" aria-hidden="true" tabindex="-1"></a>            <span class="cf">case</span> <span class="ch">&#39;`&#39;</span><span class="op">:</span></span>
+<span id="cb43-19"><a href="#cb43-19" aria-hidden="true" tabindex="-1"></a>                <span class="cf">if</span> <span class="op">(</span> <span class="op">(</span><span class="ch">&#39;`&#39;</span> <span class="op">==</span> line<span class="op">[</span><span class="dv">1</span><span class="op">])</span> <span class="op">&amp;&amp;</span> <span class="op">(</span><span class="ch">&#39;`&#39;</span> <span class="op">==</span> line<span class="op">[</span><span class="dv">2</span><span class="op">])</span> <span class="op">)</span></span>
+<span id="cb43-20"><a href="#cb43-20" aria-hidden="true" tabindex="-1"></a>                <span class="op">{</span></span>
+<span id="cb43-21"><a href="#cb43-21" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">if</span> <span class="op">(</span> DEBUG <span class="op">)</span> fprintf<span class="op">(</span> stderr<span class="op">,</span> <span class="st">&quot;@</span><span class="sc">%s</span><span class="st">&quot;</span><span class="op">,</span> line <span class="op">);</span></span>
+<span id="cb43-22"><a href="#cb43-22" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">if</span> <span class="op">(</span> <span class="dv">1</span> <span class="op">)</span> processPreformatted<span class="op">(</span> line<span class="op">,</span> stream<span class="op">,</span> p <span class="op">);</span></span>
+<span id="cb43-23"><a href="#cb43-23" aria-hidden="true" tabindex="-1"></a>                <span class="op">}</span></span>
+<span id="cb43-24"><a href="#cb43-24" aria-hidden="true" tabindex="-1"></a>                <span class="cf">break</span><span class="op">;</span></span>
+<span id="cb43-25"><a href="#cb43-25" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb43-26"><a href="#cb43-26" aria-hidden="true" tabindex="-1"></a>            <span class="cf">default</span><span class="op">:</span></span>
+<span id="cb43-27"><a href="#cb43-27" aria-hidden="true" tabindex="-1"></a>                <span class="cf">if</span> <span class="op">(</span> DEBUG <span class="op">)</span> fprintf<span class="op">(</span> stderr<span class="op">,</span> <span class="st">&quot;@</span><span class="sc">%s</span><span class="st">&quot;</span><span class="op">,</span> line <span class="op">);</span></span>
+<span id="cb43-28"><a href="#cb43-28" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb43-29"><a href="#cb43-29" aria-hidden="true" tabindex="-1"></a>            free<span class="op">(</span> line <span class="op">);</span></span>
+<span id="cb43-30"><a href="#cb43-30" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb43-31"><a href="#cb43-31" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span> <span class="cf">while</span> <span class="op">(</span> line <span class="op">);</span></span>
+<span id="cb43-32"><a href="#cb43-32" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>! #### Function: generateDelimiter</p>
+<pre><code>char* generateDelimiter( const char* prefix, const char* pattern, const char* suffix )
 {
-    <span class="dt">char</span>* line_delimiter = NULL;
-    <span class="dt">char</span>* line;
-
-    <span class="cf">do</span>
-    {
-        line = readline( stream );
-        <span class="cf">if</span> ( line )
-        {
-            <span class="cf">switch</span> ( line[<span class="dv">0</span>] )
-            {
-            <span class="cf">case</span> <span class="ch">&#39;~&#39;</span>:
-                line_delimiter = generateDelimiter( <span class="st">&quot;~&quot;</span>, pattern, <span class="st">&quot;~&quot;</span> );
-
-                <span class="cf">if</span> ( DEBUG ) fprintf( stderr, <span class="st">&quot;@%s&quot;</span>, line );
-                processPreformatted( line, stream, line_delimiter );
-                <span class="cf">break</span>;
-            <span class="cf">case</span> <span class="ch">&#39;`&#39;</span>:
-                line_delimiter = generateDelimiter( <span class="st">&quot;```&quot;</span>, pattern, <span class="st">&quot;&quot;</span> );
-
-                <span class="cf">if</span> ( (<span class="ch">&#39;`&#39;</span> == line[<span class="dv">1</span>]) &amp;&amp; (<span class="ch">&#39;`&#39;</span> == line[<span class="dv">2</span>]) )
-                {
-                    <span class="cf">if</span> ( DEBUG ) fprintf( stderr, <span class="st">&quot;@%s&quot;</span>, line );
-                    processPreformatted( line, stream, line_delimiter );
-                }
-                <span class="cf">break</span>;
-            <span class="cf">default</span>:
-                <span class="cf">if</span> ( DEBUG ) fprintf( stderr, <span class="st">&quot;@%s&quot;</span>, line );
-            }
-            free( line );
-        }
-    } <span class="cf">while</span> ( line );
-
-    free( line_delimiter );
-}</code></pre></div>
-<h4 id="function-generatedelimiter">Function: generateDelimiter</h4>
-<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">char</span>* generateDelimiter( <span class="dt">const</span> <span class="dt">char</span>* prefix, <span class="dt">const</span> <span class="dt">char</span>* pattern, <span class="dt">const</span> <span class="dt">char</span>* suffix )
-{
-    <span class="dt">char</span>* delimiter = calloc( strlen( prefix ) + strlen( pattern ) + strlen( suffix ) + <span class="dv">1</span>, <span class="kw">sizeof</span>(<span class="dt">char</span>) );
-    <span class="dt">char</span>* tmp       = delimiter;
+    char* delimiter = calloc( strlen( prefix ) + strlen( pattern ) + strlen( suffix ) + 1, sizeof(char) );
+    char* tmp       = delimiter;
           tmp       = stpcpy( tmp, prefix  );
           tmp       = stpcpy( tmp, pattern );
           tmp       = stpcpy( tmp, suffix  );
 
-    <span class="cf">return</span> delimiter;
-}</code></pre></div>
+    return delimiter;
+}</code></pre>
+<p>!</p>
 <h4 id="function-processpreformatted">Function: processPreformatted</h4>
-<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">void</span> processPreformatted( <span class="dt">const</span> <span class="dt">char</span>* line, FILE* stream, <span class="dt">const</span> <span class="dt">char</span>* line_delimiter )
-{
-    <span class="dt">int</span>   loop = <span class="dv">1</span>;
-    <span class="dt">char</span>* pre;
-
-    FILE* dev_null = fopen( <span class="st">&quot;/dev/null&quot;</span>, <span class="st">&quot;a&quot;</span> );
-    FILE* out      = dev_null;
-    <span class="dt">char</span>* c        = <span class="st">&quot;@&quot;</span>;
-
-    <span class="cf">if</span> ( stringHasPrefix( line, line_delimiter ) )
-    {
-        out = stdout;
-        c   = <span class="st">&quot;&quot;</span>;
-    }
-
-    <span class="cf">do</span>
-    {
-        pre = readline( stream );
-        <span class="cf">if</span> ( pre )
-        {
-            <span class="cf">if</span> ( STRIP )
-            {
-                <span class="cf">switch</span> ( pre[<span class="dv">0</span>] )
-                {
-                <span class="cf">case</span> <span class="ch">&#39;~&#39;</span>:
-                    <span class="cf">if</span> ( DEBUG ) fprintf( stderr, <span class="st">&quot;@%s&quot;</span>, pre );
-                    loop = <span class="dv">0</span>;
-                    <span class="cf">break</span>;
-                <span class="cf">case</span> <span class="ch">&#39;/&#39;</span>:
-                    <span class="cf">if</span> ( <span class="ch">&#39;/&#39;</span> == pre[<span class="dv">1</span>] ) fprintf( out, <span class="st">&quot;;</span><span class="sc">\n</span><span class="st">&quot;</span> );
-                    <span class="cf">break</span>;
-                <span class="cf">case</span> <span class="ch">&#39;D&#39;</span>:
-                    <span class="cf">if</span> ( stringHasPrefix( pre, <span class="st">&quot;DROP&quot;</span>      ) ) <span class="cf">break</span>;
-                    <span class="cf">if</span> ( stringHasPrefix( pre, <span class="st">&quot;DELIMITER&quot;</span> ) ) <span class="cf">break</span>;
-                    <span class="cf">break</span>;
-
-                <span class="cf">case</span> <span class="ch">&#39;d&#39;</span>:
-                    <span class="cf">if</span> ( stringHasPrefix( pre, <span class="st">&quot;drop&quot;</span>      ) ) <span class="cf">break</span>;
-                    <span class="cf">if</span> ( stringHasPrefix( pre, <span class="st">&quot;delimiter&quot;</span> ) ) <span class="cf">break</span>;
-                    <span class="cf">break</span>;
-
-                <span class="cf">default</span>:
-                    <span class="cf">if</span> ( !stringHasPrefix( c, <span class="st">&quot;@&quot;</span> ) ) fprintf( out, <span class="st">&quot;%s%s&quot;</span>, c, pre );
-                }
-            }
-            <span class="cf">else</span>
-            {
-                <span class="cf">switch</span> ( pre[<span class="dv">0</span>] )
-                {
-                <span class="cf">case</span> <span class="ch">&#39;~&#39;</span>:
-                    <span class="cf">if</span> ( DEBUG ) fprintf( stderr, <span class="st">&quot;@%s&quot;</span>, pre );
-                    loop = <span class="dv">0</span>;
-                    <span class="cf">break</span>;
-
-                <span class="cf">case</span> <span class="ch">&#39;D&#39;</span>:
-                    <span class="cf">if</span> ( stringHasPrefix( pre, <span class="st">&quot;DROP&quot;</span>      ) ) <span class="cf">break</span>;
-                    <span class="cf">if</span> ( stringHasPrefix( pre, <span class="st">&quot;DELIMITER&quot;</span> ) ) <span class="cf">break</span>;
-                    <span class="cf">break</span>;
-
-                <span class="cf">case</span> <span class="ch">&#39;d&#39;</span>:
-                    <span class="cf">if</span> ( stringHasPrefix( pre, <span class="st">&quot;drop&quot;</span>      ) ) <span class="cf">break</span>;
-                    <span class="cf">if</span> ( stringHasPrefix( pre, <span class="st">&quot;delimiter&quot;</span> ) ) <span class="cf">break</span>;
-                    <span class="cf">break</span>;
-
-                <span class="cf">default</span>:
-                    <span class="cf">if</span> ( !stringHasPrefix( c, <span class="st">&quot;@&quot;</span> ) ) fprintf( out, <span class="st">&quot;%s%s&quot;</span>, c, pre );
-                }
-            }
-            free( pre );
-        } <span class="cf">else</span> {
-            loop = <span class="dv">0</span>;
-        }
-    }
-    <span class="cf">while</span> ( loop );
-
-    fclose( dev_null );
-}</code></pre></div>
+<p>If the passed line matches a pattern in ‘p’, we will copy characters
+from ‘in’ into ‘out’; otherwise we will copy to dev null.</p>
+<p>However, if that pattern is ‘spgen’, we want to process that content
+using the spgen web service then copy the response to out. To achive
+this we will use a dummy stream called ‘os’. If the pattern is ‘spgen’,
+we will make ‘os’ be a temporary buffer, otherwise it will be out.</p>
+<p>If the pattern is “spgen”, we want to read the characters into a
+temporary buffer ‘buf’, which we will then use to query spgen.org, and
+then we will write the response to out.</p>
+<div class="sourceCode" id="cb45"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> processPreformatted<span class="op">(</span> <span class="dt">const</span> <span class="dt">char</span><span class="op">*</span> line<span class="op">,</span> <span class="dt">FILE</span><span class="op">*</span> in<span class="op">,</span> Patterns<span class="op">*</span> p <span class="op">)</span></span>
+<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">char</span><span class="op">*</span> pattern <span class="op">=</span> extractPattern<span class="op">(</span> line <span class="op">);</span></span>
+<span id="cb45-4"><a href="#cb45-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">FILE</span><span class="op">*</span> out     <span class="op">=</span> Patterns_retrieveOutputStream<span class="op">(</span> p<span class="op">,</span> pattern <span class="op">);</span></span>
+<span id="cb45-5"><a href="#cb45-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">bool</span>  writing <span class="op">=</span> <span class="op">(</span>NULL <span class="op">!=</span> out<span class="op">);</span></span>
+<span id="cb45-6"><a href="#cb45-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-7"><a href="#cb45-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span> <span class="op">!</span>out <span class="op">)</span></span>
+<span id="cb45-8"><a href="#cb45-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb45-9"><a href="#cb45-9" aria-hidden="true" tabindex="-1"></a>        out <span class="op">=</span> DEV_NULL<span class="op">;</span></span>
+<span id="cb45-10"><a href="#cb45-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb45-11"><a href="#cb45-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-12"><a href="#cb45-12" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span>    loop <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb45-13"><a href="#cb45-13" aria-hidden="true" tabindex="-1"></a>    <span class="dt">char</span><span class="op">*</span>  pre  <span class="op">=</span> NULL<span class="op">;</span></span>
+<span id="cb45-14"><a href="#cb45-14" aria-hidden="true" tabindex="-1"></a>    <span class="dt">char</span><span class="op">*</span>  bp   <span class="op">=</span> NULL<span class="op">;</span></span>
+<span id="cb45-15"><a href="#cb45-15" aria-hidden="true" tabindex="-1"></a>    <span class="dt">size_t</span> size <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb45-16"><a href="#cb45-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-17"><a href="#cb45-17" aria-hidden="true" tabindex="-1"></a>    <span class="dt">FILE</span><span class="op">*</span>  buf  <span class="op">=</span> NULL<span class="op">;</span></span>
+<span id="cb45-18"><a href="#cb45-18" aria-hidden="true" tabindex="-1"></a>    <span class="dt">FILE</span><span class="op">*</span>  os   <span class="op">=</span> NULL<span class="op">;</span></span>
+<span id="cb45-19"><a href="#cb45-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-20"><a href="#cb45-20" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span> writing <span class="op">&amp;&amp;</span> stringEquals<span class="op">(</span> <span class="st">&quot;spgen&quot;</span><span class="op">,</span> pattern <span class="op">)</span> <span class="op">)</span></span>
+<span id="cb45-21"><a href="#cb45-21" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb45-22"><a href="#cb45-22" aria-hidden="true" tabindex="-1"></a>        buf <span class="op">=</span> open_memstream<span class="op">(</span> <span class="op">&amp;</span>bp<span class="op">,</span> <span class="op">&amp;</span>size <span class="op">);</span></span>
+<span id="cb45-23"><a href="#cb45-23" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span> <span class="op">!</span>buf <span class="op">)</span></span>
+<span id="cb45-24"><a href="#cb45-24" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb45-25"><a href="#cb45-25" aria-hidden="true" tabindex="-1"></a>            perror<span class="op">(</span> <span class="st">&quot;Could not instantiate mem stream.&quot;</span> <span class="op">);</span></span>
+<span id="cb45-26"><a href="#cb45-26" aria-hidden="true" tabindex="-1"></a>            exit<span class="op">(</span> <span class="op">-</span><span class="dv">1</span> <span class="op">);</span></span>
+<span id="cb45-27"><a href="#cb45-27" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb45-28"><a href="#cb45-28" aria-hidden="true" tabindex="-1"></a>        os  <span class="op">=</span> buf<span class="op">;</span></span>
+<span id="cb45-29"><a href="#cb45-29" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb45-30"><a href="#cb45-30" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span></span>
+<span id="cb45-31"><a href="#cb45-31" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb45-32"><a href="#cb45-32" aria-hidden="true" tabindex="-1"></a>        os <span class="op">=</span> out<span class="op">;</span></span>
+<span id="cb45-33"><a href="#cb45-33" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb45-34"><a href="#cb45-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-35"><a href="#cb45-35" aria-hidden="true" tabindex="-1"></a>    <span class="cf">do</span></span>
+<span id="cb45-36"><a href="#cb45-36" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb45-37"><a href="#cb45-37" aria-hidden="true" tabindex="-1"></a>        pre <span class="op">=</span> readline<span class="op">(</span> in <span class="op">);</span></span>
+<span id="cb45-38"><a href="#cb45-38" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span> pre <span class="op">)</span></span>
+<span id="cb45-39"><a href="#cb45-39" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb45-40"><a href="#cb45-40" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> <span class="op">(</span> STRIP <span class="op">)</span></span>
+<span id="cb45-41"><a href="#cb45-41" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb45-42"><a href="#cb45-42" aria-hidden="true" tabindex="-1"></a>                <span class="cf">switch</span> <span class="op">(</span> pre<span class="op">[</span><span class="dv">0</span><span class="op">]</span> <span class="op">)</span></span>
+<span id="cb45-43"><a href="#cb45-43" aria-hidden="true" tabindex="-1"></a>                <span class="op">{</span></span>
+<span id="cb45-44"><a href="#cb45-44" aria-hidden="true" tabindex="-1"></a>                <span class="cf">case</span> <span class="ch">&#39;~&#39;</span><span class="op">:</span></span>
+<span id="cb45-45"><a href="#cb45-45" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">if</span> <span class="op">(</span> DEBUG <span class="op">)</span> fprintf<span class="op">(</span> stderr<span class="op">,</span> <span class="st">&quot;@</span><span class="sc">%s</span><span class="st">&quot;</span><span class="op">,</span> pre <span class="op">);</span></span>
+<span id="cb45-46"><a href="#cb45-46" aria-hidden="true" tabindex="-1"></a>                    loop <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb45-47"><a href="#cb45-47" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">break</span><span class="op">;</span></span>
+<span id="cb45-48"><a href="#cb45-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-49"><a href="#cb45-49" aria-hidden="true" tabindex="-1"></a>                <span class="cf">case</span> <span class="ch">&#39;/&#39;</span><span class="op">:</span></span>
+<span id="cb45-50"><a href="#cb45-50" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">if</span> <span class="op">(</span> <span class="ch">&#39;/&#39;</span> <span class="op">==</span> pre<span class="op">[</span><span class="dv">1</span><span class="op">]</span> <span class="op">)</span> fprintf<span class="op">(</span> os<span class="op">,</span> <span class="st">&quot;;</span><span class="sc">\n</span><span class="st">&quot;</span> <span class="op">);</span></span>
+<span id="cb45-51"><a href="#cb45-51" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">break</span><span class="op">;</span></span>
+<span id="cb45-52"><a href="#cb45-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-53"><a href="#cb45-53" aria-hidden="true" tabindex="-1"></a>                <span class="cf">case</span> <span class="ch">&#39;D&#39;</span><span class="op">:</span></span>
+<span id="cb45-54"><a href="#cb45-54" aria-hidden="true" tabindex="-1"></a>                <span class="cf">case</span> <span class="ch">&#39;d&#39;</span><span class="op">:</span></span>
+<span id="cb45-55"><a href="#cb45-55" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">if</span> <span class="op">(</span> stringHasPrefix<span class="op">(</span> pre<span class="op">,</span> <span class="st">&quot;DROP&quot;</span>      <span class="op">)</span> <span class="op">)</span> <span class="cf">break</span><span class="op">;</span></span>
+<span id="cb45-56"><a href="#cb45-56" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">if</span> <span class="op">(</span> stringHasPrefix<span class="op">(</span> pre<span class="op">,</span> <span class="st">&quot;DELIMITER&quot;</span> <span class="op">)</span> <span class="op">)</span> <span class="cf">break</span><span class="op">;</span></span>
+<span id="cb45-57"><a href="#cb45-57" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">if</span> <span class="op">(</span> stringHasPrefix<span class="op">(</span> pre<span class="op">,</span> <span class="st">&quot;drop&quot;</span>      <span class="op">)</span> <span class="op">)</span> <span class="cf">break</span><span class="op">;</span></span>
+<span id="cb45-58"><a href="#cb45-58" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">if</span> <span class="op">(</span> stringHasPrefix<span class="op">(</span> pre<span class="op">,</span> <span class="st">&quot;delimiter&quot;</span> <span class="op">)</span> <span class="op">)</span> <span class="cf">break</span><span class="op">;</span></span>
+<span id="cb45-59"><a href="#cb45-59" aria-hidden="true" tabindex="-1"></a>                    <span class="co">// fall through</span></span>
+<span id="cb45-60"><a href="#cb45-60" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-61"><a href="#cb45-61" aria-hidden="true" tabindex="-1"></a>                <span class="cf">default</span><span class="op">:</span></span>
+<span id="cb45-62"><a href="#cb45-62" aria-hidden="true" tabindex="-1"></a>                    fprintf<span class="op">(</span> os<span class="op">,</span> <span class="st">&quot;</span><span class="sc">%s</span><span class="st">&quot;</span><span class="op">,</span> pre <span class="op">);</span></span>
+<span id="cb45-63"><a href="#cb45-63" aria-hidden="true" tabindex="-1"></a>                <span class="op">}</span></span>
+<span id="cb45-64"><a href="#cb45-64" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb45-65"><a href="#cb45-65" aria-hidden="true" tabindex="-1"></a>            <span class="cf">else</span></span>
+<span id="cb45-66"><a href="#cb45-66" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb45-67"><a href="#cb45-67" aria-hidden="true" tabindex="-1"></a>                <span class="cf">switch</span> <span class="op">(</span> pre<span class="op">[</span><span class="dv">0</span><span class="op">]</span> <span class="op">)</span></span>
+<span id="cb45-68"><a href="#cb45-68" aria-hidden="true" tabindex="-1"></a>                <span class="op">{</span></span>
+<span id="cb45-69"><a href="#cb45-69" aria-hidden="true" tabindex="-1"></a>                <span class="cf">case</span> <span class="ch">&#39;~&#39;</span><span class="op">:</span></span>
+<span id="cb45-70"><a href="#cb45-70" aria-hidden="true" tabindex="-1"></a>                <span class="cf">case</span> <span class="ch">&#39;`&#39;</span><span class="op">:</span></span>
+<span id="cb45-71"><a href="#cb45-71" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">if</span> <span class="op">(</span> DEBUG <span class="op">)</span> fprintf<span class="op">(</span> stderr<span class="op">,</span> <span class="st">&quot;@</span><span class="sc">%s</span><span class="st">&quot;</span><span class="op">,</span> pre <span class="op">);</span></span>
+<span id="cb45-72"><a href="#cb45-72" aria-hidden="true" tabindex="-1"></a>                    loop <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb45-73"><a href="#cb45-73" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">break</span><span class="op">;</span></span>
+<span id="cb45-74"><a href="#cb45-74" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-75"><a href="#cb45-75" aria-hidden="true" tabindex="-1"></a>                <span class="cf">case</span> <span class="ch">&#39;D&#39;</span><span class="op">:</span></span>
+<span id="cb45-76"><a href="#cb45-76" aria-hidden="true" tabindex="-1"></a>                <span class="cf">case</span> <span class="ch">&#39;d&#39;</span><span class="op">:</span></span>
+<span id="cb45-77"><a href="#cb45-77" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">if</span> <span class="op">(</span> stringHasPrefix<span class="op">(</span> pre<span class="op">,</span> <span class="st">&quot;DROP&quot;</span>      <span class="op">)</span> <span class="op">)</span> <span class="cf">break</span><span class="op">;</span></span>
+<span id="cb45-78"><a href="#cb45-78" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">if</span> <span class="op">(</span> stringHasPrefix<span class="op">(</span> pre<span class="op">,</span> <span class="st">&quot;drop&quot;</span>      <span class="op">)</span> <span class="op">)</span> <span class="cf">break</span><span class="op">;</span></span>
+<span id="cb45-79"><a href="#cb45-79" aria-hidden="true" tabindex="-1"></a>                    <span class="co">// fall through</span></span>
+<span id="cb45-80"><a href="#cb45-80" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-81"><a href="#cb45-81" aria-hidden="true" tabindex="-1"></a>                <span class="cf">default</span><span class="op">:</span></span>
+<span id="cb45-82"><a href="#cb45-82" aria-hidden="true" tabindex="-1"></a>                    fprintf<span class="op">(</span> os<span class="op">,</span> <span class="st">&quot;</span><span class="sc">%s</span><span class="st">&quot;</span><span class="op">,</span> pre <span class="op">);</span></span>
+<span id="cb45-83"><a href="#cb45-83" aria-hidden="true" tabindex="-1"></a>                <span class="op">}</span></span>
+<span id="cb45-84"><a href="#cb45-84" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb45-85"><a href="#cb45-85" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-86"><a href="#cb45-86" aria-hidden="true" tabindex="-1"></a>            free<span class="op">(</span> pre <span class="op">);</span></span>
+<span id="cb45-87"><a href="#cb45-87" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb45-88"><a href="#cb45-88" aria-hidden="true" tabindex="-1"></a>            loop <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb45-89"><a href="#cb45-89" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb45-90"><a href="#cb45-90" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb45-91"><a href="#cb45-91" aria-hidden="true" tabindex="-1"></a>    <span class="cf">while</span> <span class="op">(</span> loop <span class="op">);</span></span>
+<span id="cb45-92"><a href="#cb45-92" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-93"><a href="#cb45-93" aria-hidden="true" tabindex="-1"></a>    fflush<span class="op">(</span> os <span class="op">);</span></span>
+<span id="cb45-94"><a href="#cb45-94" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-95"><a href="#cb45-95" aria-hidden="true" tabindex="-1"></a>    <span class="co">/* If &#39;buf&#39; is set we need to use it&#39;s contents and call &#39;spgen&#39; and write the result to &#39;out&#39;. */</span></span>
+<span id="cb45-96"><a href="#cb45-96" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-97"><a href="#cb45-97" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span> buf <span class="op">)</span></span>
+<span id="cb45-98"><a href="#cb45-98" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb45-99"><a href="#cb45-99" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span> stringEquals<span class="op">(</span> <span class="st">&quot;spgen&quot;</span><span class="op">,</span> pattern <span class="op">)</span> <span class="op">)</span></span>
+<span id="cb45-100"><a href="#cb45-100" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb45-101"><a href="#cb45-101" aria-hidden="true" tabindex="-1"></a>            <span class="dt">char</span><span class="op">*</span> host     <span class="op">=</span> <span class="st">&quot;http://sqlgen.azurewebsites.net/api/sqlgenerate/&quot;</span><span class="op">;</span></span>
+<span id="cb45-102"><a href="#cb45-102" aria-hidden="true" tabindex="-1"></a>            <span class="dt">char</span><span class="op">*</span> field    <span class="op">=</span> <span class="st">&quot;table_info=&quot;</span><span class="op">;</span></span>
+<span id="cb45-103"><a href="#cb45-103" aria-hidden="true" tabindex="-1"></a>            <span class="dt">char</span><span class="op">*</span> data     <span class="op">=</span> canonicaliseSPGenURL<span class="op">(</span> bp <span class="op">);</span></span>
+<span id="cb45-104"><a href="#cb45-104" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-105"><a href="#cb45-105" aria-hidden="true" tabindex="-1"></a>            <span class="dt">void</span><span class="op">*</span> handle   <span class="op">=</span> curl_easy_init<span class="op">();</span></span>
+<span id="cb45-106"><a href="#cb45-106" aria-hidden="true" tabindex="-1"></a>            <span class="dt">char</span><span class="op">*</span> encoded  <span class="op">=</span> curl_easy_escape<span class="op">(</span> handle<span class="op">,</span> data<span class="op">,</span> <span class="dv">0</span> <span class="op">);</span></span>
+<span id="cb45-107"><a href="#cb45-107" aria-hidden="true" tabindex="-1"></a>            <span class="dt">char</span><span class="op">*</span> postdata <span class="op">=</span> calloc<span class="op">(</span> strlen<span class="op">(</span> field <span class="op">)</span> <span class="op">+</span> strlen<span class="op">(</span> encoded <span class="op">)</span> <span class="op">+</span> <span class="dv">1</span><span class="op">,</span> <span class="kw">sizeof</span><span class="op">(</span><span class="dt">char</span><span class="op">)</span> <span class="op">);</span></span>
+<span id="cb45-108"><a href="#cb45-108" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb45-109"><a href="#cb45-109" aria-hidden="true" tabindex="-1"></a>                sprintf<span class="op">(</span> postdata<span class="op">,</span> <span class="st">&quot;</span><span class="sc">%s%s</span><span class="st">&quot;</span><span class="op">,</span> field<span class="op">,</span> encoded <span class="op">);</span></span>
+<span id="cb45-110"><a href="#cb45-110" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-111"><a href="#cb45-111" aria-hidden="true" tabindex="-1"></a>                curl_easy_setopt <span class="op">(</span> handle<span class="op">,</span> CURLOPT_URL<span class="op">,</span>        host     <span class="op">);</span></span>
+<span id="cb45-112"><a href="#cb45-112" aria-hidden="true" tabindex="-1"></a>                curl_easy_setopt <span class="op">(</span> handle<span class="op">,</span> CURLOPT_POST<span class="op">,</span>       <span class="dv">1</span><span class="bu">L</span>       <span class="op">);</span></span>
+<span id="cb45-113"><a href="#cb45-113" aria-hidden="true" tabindex="-1"></a>                curl_easy_setopt <span class="op">(</span> handle<span class="op">,</span> CURLOPT_POSTFIELDS<span class="op">,</span> postdata <span class="op">);</span></span>
+<span id="cb45-114"><a href="#cb45-114" aria-hidden="true" tabindex="-1"></a>                curl_easy_setopt <span class="op">(</span> handle<span class="op">,</span> CURLOPT_WRITEDATA<span class="op">,</span>  out      <span class="op">);</span> <span class="co">// &lt;------ Writing to &#39;out&#39;</span></span>
+<span id="cb45-115"><a href="#cb45-115" aria-hidden="true" tabindex="-1"></a>                curl_easy_perform<span class="op">(</span> handle <span class="op">);</span></span>
+<span id="cb45-116"><a href="#cb45-116" aria-hidden="true" tabindex="-1"></a>                curl_easy_cleanup<span class="op">(</span> handle <span class="op">);</span></span>
+<span id="cb45-117"><a href="#cb45-117" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb45-118"><a href="#cb45-118" aria-hidden="true" tabindex="-1"></a>            free<span class="op">(</span> postdata <span class="op">);</span></span>
+<span id="cb45-119"><a href="#cb45-119" aria-hidden="true" tabindex="-1"></a>            curl_free<span class="op">(</span> encoded <span class="op">);</span></span>
+<span id="cb45-120"><a href="#cb45-120" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb45-121"><a href="#cb45-121" aria-hidden="true" tabindex="-1"></a>        fclose<span class="op">(</span> buf <span class="op">);</span></span>
+<span id="cb45-122"><a href="#cb45-122" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb45-123"><a href="#cb45-123" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-124"><a href="#cb45-124" aria-hidden="true" tabindex="-1"></a>    fflush<span class="op">(</span> out <span class="op">);</span></span>
+<span id="cb45-125"><a href="#cb45-125" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<div class="sourceCode" id="cb46"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="dt">char</span><span class="op">*</span> extractPattern<span class="op">(</span> <span class="dt">const</span> <span class="dt">char</span><span class="op">*</span> line <span class="op">)</span></span>
+<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb46-3"><a href="#cb46-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">char</span><span class="op">*</span> pattern <span class="op">=</span> NULL<span class="op">;</span></span>
+<span id="cb46-4"><a href="#cb46-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb46-5"><a href="#cb46-5" aria-hidden="true" tabindex="-1"></a>        <span class="dt">char</span><span class="op">*</span> copy <span class="op">=</span> stringCopy<span class="op">(</span> line <span class="op">);</span></span>
+<span id="cb46-6"><a href="#cb46-6" aria-hidden="true" tabindex="-1"></a>        <span class="dt">char</span><span class="op">*</span> tmp  <span class="op">=</span> copy<span class="op">;</span></span>
+<span id="cb46-7"><a href="#cb46-7" aria-hidden="true" tabindex="-1"></a>        <span class="dt">int</span>   len<span class="op">;</span></span>
+<span id="cb46-8"><a href="#cb46-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb46-9"><a href="#cb46-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">while</span> <span class="op">(</span> <span class="op">(</span><span class="ch">&#39;~&#39;</span> <span class="op">==</span> <span class="op">*</span>tmp<span class="op">)</span> <span class="op">||</span> <span class="op">(</span><span class="ch">&#39;`&#39;</span> <span class="op">==</span> <span class="op">*</span>tmp<span class="op">)</span> <span class="op">)</span> tmp<span class="op">++;</span></span>
+<span id="cb46-10"><a href="#cb46-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb46-11"><a href="#cb46-11" aria-hidden="true" tabindex="-1"></a>        len <span class="op">=</span> strlen<span class="op">(</span> tmp <span class="op">);</span></span>
+<span id="cb46-12"><a href="#cb46-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb46-13"><a href="#cb46-13" aria-hidden="true" tabindex="-1"></a>        <span class="dt">int</span> loop <span class="op">=</span> TRUE<span class="op">;</span></span>
+<span id="cb46-14"><a href="#cb46-14" aria-hidden="true" tabindex="-1"></a>        <span class="cf">do</span></span>
+<span id="cb46-15"><a href="#cb46-15" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb46-16"><a href="#cb46-16" aria-hidden="true" tabindex="-1"></a>            <span class="cf">switch</span> <span class="op">(</span> tmp<span class="op">[</span>len<span class="op">-</span><span class="dv">1</span><span class="op">]</span> <span class="op">)</span></span>
+<span id="cb46-17"><a href="#cb46-17" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb46-18"><a href="#cb46-18" aria-hidden="true" tabindex="-1"></a>                <span class="cf">case</span> <span class="ch">&#39; &#39;</span><span class="op">:</span></span>
+<span id="cb46-19"><a href="#cb46-19" aria-hidden="true" tabindex="-1"></a>                <span class="cf">case</span> <span class="ch">&#39;</span><span class="sc">\t</span><span class="ch">&#39;</span><span class="op">:</span></span>
+<span id="cb46-20"><a href="#cb46-20" aria-hidden="true" tabindex="-1"></a>                <span class="cf">case</span> <span class="ch">&#39;</span><span class="sc">\n</span><span class="ch">&#39;</span><span class="op">:</span></span>
+<span id="cb46-21"><a href="#cb46-21" aria-hidden="true" tabindex="-1"></a>                <span class="cf">case</span> <span class="ch">&#39;~&#39;</span><span class="op">:</span></span>
+<span id="cb46-22"><a href="#cb46-22" aria-hidden="true" tabindex="-1"></a>                <span class="cf">case</span> <span class="ch">&#39;`&#39;</span><span class="op">:</span></span>
+<span id="cb46-23"><a href="#cb46-23" aria-hidden="true" tabindex="-1"></a>                    tmp<span class="op">[</span>len<span class="op">-</span><span class="dv">1</span><span class="op">]</span> <span class="op">=</span> <span class="ch">&#39;</span><span class="sc">\0</span><span class="ch">&#39;</span><span class="op">;</span></span>
+<span id="cb46-24"><a href="#cb46-24" aria-hidden="true" tabindex="-1"></a>                    len<span class="op">--;</span></span>
+<span id="cb46-25"><a href="#cb46-25" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">break</span><span class="op">;</span></span>
+<span id="cb46-26"><a href="#cb46-26" aria-hidden="true" tabindex="-1"></a>                </span>
+<span id="cb46-27"><a href="#cb46-27" aria-hidden="true" tabindex="-1"></a>                <span class="cf">default</span><span class="op">:</span></span>
+<span id="cb46-28"><a href="#cb46-28" aria-hidden="true" tabindex="-1"></a>                    loop <span class="op">=</span> FALSE<span class="op">;</span></span>
+<span id="cb46-29"><a href="#cb46-29" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb46-30"><a href="#cb46-30" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb46-31"><a href="#cb46-31" aria-hidden="true" tabindex="-1"></a>        <span class="cf">while</span> <span class="op">(</span> len <span class="op">&amp;&amp;</span> loop <span class="op">);</span></span>
+<span id="cb46-32"><a href="#cb46-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb46-33"><a href="#cb46-33" aria-hidden="true" tabindex="-1"></a>        pattern <span class="op">=</span> stringCopy<span class="op">(</span> tmp <span class="op">);</span></span>
+<span id="cb46-34"><a href="#cb46-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb46-35"><a href="#cb46-35" aria-hidden="true" tabindex="-1"></a>        free<span class="op">(</span> copy <span class="op">);</span></span>
+<span id="cb46-36"><a href="#cb46-36" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb46-37"><a href="#cb46-37" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> pattern<span class="op">;</span></span>
+<span id="cb46-38"><a href="#cb46-38" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<div class="sourceCode" id="cb47"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a><span class="dt">char</span><span class="op">*</span> canonicaliseSPGenURL<span class="op">(</span> <span class="dt">const</span> <span class="dt">char</span><span class="op">*</span> url <span class="op">)</span></span>
+<span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb47-3"><a href="#cb47-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span>   len       <span class="op">=</span> strlen<span class="op">(</span> url <span class="op">);</span></span>
+<span id="cb47-4"><a href="#cb47-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">char</span><span class="op">*</span> canonical <span class="op">=</span> calloc<span class="op">(</span> len <span class="op">+</span> <span class="dv">1</span><span class="op">,</span> <span class="kw">sizeof</span><span class="op">(</span><span class="dt">char</span><span class="op">)</span> <span class="op">);</span></span>
+<span id="cb47-5"><a href="#cb47-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb47-6"><a href="#cb47-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> index <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb47-7"><a href="#cb47-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="op">(</span> <span class="dt">int</span> i<span class="op">=</span><span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> len<span class="op">;</span> i<span class="op">++</span> <span class="op">)</span></span>
+<span id="cb47-8"><a href="#cb47-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb47-9"><a href="#cb47-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">switch</span> <span class="op">(</span> url<span class="op">[</span>i<span class="op">]</span> <span class="op">)</span></span>
+<span id="cb47-10"><a href="#cb47-10" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb47-11"><a href="#cb47-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">case</span> <span class="ch">&#39; &#39;</span><span class="op">:</span></span>
+<span id="cb47-12"><a href="#cb47-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">case</span> <span class="ch">&#39;</span><span class="sc">\t</span><span class="ch">&#39;</span><span class="op">:</span></span>
+<span id="cb47-13"><a href="#cb47-13" aria-hidden="true" tabindex="-1"></a>        <span class="cf">case</span> <span class="ch">&#39;</span><span class="sc">\n</span><span class="ch">&#39;</span><span class="op">:</span></span>
+<span id="cb47-14"><a href="#cb47-14" aria-hidden="true" tabindex="-1"></a>            <span class="cf">break</span><span class="op">;</span></span>
+<span id="cb47-15"><a href="#cb47-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb47-16"><a href="#cb47-16" aria-hidden="true" tabindex="-1"></a>        <span class="cf">default</span><span class="op">:</span></span>
+<span id="cb47-17"><a href="#cb47-17" aria-hidden="true" tabindex="-1"></a>            canonical<span class="op">[</span>index<span class="op">++]</span> <span class="op">=</span> url<span class="op">[</span>i<span class="op">];</span></span>
+<span id="cb47-18"><a href="#cb47-18" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb47-19"><a href="#cb47-19" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb47-20"><a href="#cb47-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb47-21"><a href="#cb47-21" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> canonical<span class="op">;</span></span>
+<span id="cb47-22"><a href="#cb47-22" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <h3 id="general-purpose-functions">General purpose functions</h3>
-<p>The following functions are general purpose, and can be used by any program.</p>
+<p>The following functions are general purpose, and can be used by any
+program.</p>
 <h4 id="function-readline">Function: readline</h4>
-<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">char</span>* readline( FILE* stream )
-{
-    <span class="dt">int</span>  n     = <span class="dv">0</span>;
-    <span class="dt">int</span>  sz    = <span class="dv">1024</span>;
-    <span class="dt">char</span> ch[<span class="dv">2</span>] = { <span class="dv">0</span>, <span class="dv">0</span> };
-    <span class="dt">char</span>* line = calloc( sz + <span class="dv">1</span>, <span class="kw">sizeof</span>( <span class="dt">char</span> ) );
-
-    <span class="dt">int</span> read;
-    <span class="cf">do</span>
-    {
-        read = fread( ch, <span class="kw">sizeof</span>(<span class="dt">char</span>), <span class="dv">1</span>, stream );
-        <span class="cf">if</span> ( read )
-        {
-            <span class="cf">switch</span> ( *ch )
-            {
-            <span class="cf">case</span> <span class="ch">&#39;\n&#39;</span>:
-                line[n++] = *ch;
-                line[n]   = &#39;\<span class="dv">0</span>&#39;;
-                read      = <span class="dv">0</span>;
-                <span class="cf">break</span>;
-            <span class="cf">default</span>:
-                line[n++] = *ch;
-                line[n]   = &#39;\<span class="dv">0</span>&#39;;
-            }
-
-            <span class="cf">if</span> ( n == sz )
-            {
-                sz  *= <span class="dv">2</span>;
-                line = realloc( line, sz );
-            }
-        }
-        
-    }
-    <span class="cf">while</span> ( <span class="dv">0</span> != read );
-
-    <span class="cf">if</span> ( <span class="dv">0</span> == n )
-    {
-        free( line );
-        line = NULL;
-    }
-
-    <span class="cf">return</span> line;
-}</code></pre></div>
+<div class="sourceCode" id="cb48"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="dt">char</span><span class="op">*</span> readline<span class="op">(</span> <span class="dt">FILE</span><span class="op">*</span> stream <span class="op">)</span></span>
+<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb48-3"><a href="#cb48-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span>  n     <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb48-4"><a href="#cb48-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span>  sz    <span class="op">=</span> <span class="dv">10000</span><span class="op">;</span></span>
+<span id="cb48-5"><a href="#cb48-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">char</span> ch<span class="op">[</span><span class="dv">2</span><span class="op">]</span> <span class="op">=</span> <span class="op">{</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span> <span class="op">};</span></span>
+<span id="cb48-6"><a href="#cb48-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">char</span><span class="op">*</span> line <span class="op">=</span> calloc<span class="op">(</span> sz <span class="op">+</span> <span class="dv">1</span><span class="op">,</span> <span class="kw">sizeof</span><span class="op">(</span> <span class="dt">char</span> <span class="op">)</span> <span class="op">);</span></span>
+<span id="cb48-7"><a href="#cb48-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb48-8"><a href="#cb48-8" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> read<span class="op">;</span></span>
+<span id="cb48-9"><a href="#cb48-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">do</span></span>
+<span id="cb48-10"><a href="#cb48-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb48-11"><a href="#cb48-11" aria-hidden="true" tabindex="-1"></a>        read <span class="op">=</span> fread<span class="op">(</span> ch<span class="op">,</span> <span class="kw">sizeof</span><span class="op">(</span><span class="dt">char</span><span class="op">),</span> <span class="dv">1</span><span class="op">,</span> stream <span class="op">);</span></span>
+<span id="cb48-12"><a href="#cb48-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span> <span class="op">-</span><span class="dv">1</span> <span class="op">==</span> read <span class="op">)</span></span>
+<span id="cb48-13"><a href="#cb48-13" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb48-14"><a href="#cb48-14" aria-hidden="true" tabindex="-1"></a>            read <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb48-15"><a href="#cb48-15" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb48-16"><a href="#cb48-16" aria-hidden="true" tabindex="-1"></a>        <span class="cf">else</span></span>
+<span id="cb48-17"><a href="#cb48-17" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span> read <span class="op">&gt;</span> <span class="dv">0</span> <span class="op">)</span></span>
+<span id="cb48-18"><a href="#cb48-18" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb48-19"><a href="#cb48-19" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> <span class="op">(</span> <span class="op">*</span>ch <span class="op">&gt;</span> <span class="dv">127</span> <span class="op">)</span> fprintf<span class="op">(</span> stderr<span class="op">,</span> <span class="st">&quot;</span><span class="sc">%s</span><span class="st">&quot;</span><span class="op">,</span> <span class="st">&quot;(!!)&quot;</span> <span class="op">);</span></span>
+<span id="cb48-20"><a href="#cb48-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb48-21"><a href="#cb48-21" aria-hidden="true" tabindex="-1"></a>            <span class="cf">switch</span> <span class="op">(</span> <span class="op">*</span>ch <span class="op">)</span></span>
+<span id="cb48-22"><a href="#cb48-22" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb48-23"><a href="#cb48-23" aria-hidden="true" tabindex="-1"></a>            <span class="cf">case</span> <span class="ch">&#39;</span><span class="sc">\n</span><span class="ch">&#39;</span><span class="op">:</span></span>
+<span id="cb48-24"><a href="#cb48-24" aria-hidden="true" tabindex="-1"></a>                line<span class="op">[</span>n<span class="op">++]</span> <span class="op">=</span> <span class="op">*</span>ch<span class="op">;</span></span>
+<span id="cb48-25"><a href="#cb48-25" aria-hidden="true" tabindex="-1"></a>                line<span class="op">[</span>n<span class="op">]</span>   <span class="op">=</span> <span class="ch">&#39;</span><span class="sc">\0</span><span class="ch">&#39;</span><span class="op">;</span></span>
+<span id="cb48-26"><a href="#cb48-26" aria-hidden="true" tabindex="-1"></a>                read      <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb48-27"><a href="#cb48-27" aria-hidden="true" tabindex="-1"></a>                <span class="cf">break</span><span class="op">;</span></span>
+<span id="cb48-28"><a href="#cb48-28" aria-hidden="true" tabindex="-1"></a>            <span class="cf">default</span><span class="op">:</span></span>
+<span id="cb48-29"><a href="#cb48-29" aria-hidden="true" tabindex="-1"></a>                line<span class="op">[</span>n<span class="op">++]</span> <span class="op">=</span> <span class="op">*</span>ch<span class="op">;</span></span>
+<span id="cb48-30"><a href="#cb48-30" aria-hidden="true" tabindex="-1"></a>                line<span class="op">[</span>n<span class="op">]</span>   <span class="op">=</span> <span class="ch">&#39;</span><span class="sc">\0</span><span class="ch">&#39;</span><span class="op">;</span></span>
+<span id="cb48-31"><a href="#cb48-31" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb48-32"><a href="#cb48-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb48-33"><a href="#cb48-33" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> <span class="op">(</span> n <span class="op">==</span> sz <span class="op">)</span></span>
+<span id="cb48-34"><a href="#cb48-34" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb48-35"><a href="#cb48-35" aria-hidden="true" tabindex="-1"></a>                sz  <span class="op">*=</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb48-36"><a href="#cb48-36" aria-hidden="true" tabindex="-1"></a>                line <span class="op">=</span> realloc<span class="op">(</span> line<span class="op">,</span> sz <span class="op">);</span></span>
+<span id="cb48-37"><a href="#cb48-37" aria-hidden="true" tabindex="-1"></a>                fprintf<span class="op">(</span> stderr<span class="op">,</span> <span class="st">&quot;</span><span class="sc">%s</span><span class="st">&quot;</span><span class="op">,</span> <span class="st">&quot;#&quot;</span> <span class="op">);</span></span>
+<span id="cb48-38"><a href="#cb48-38" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb48-39"><a href="#cb48-39" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb48-40"><a href="#cb48-40" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb48-41"><a href="#cb48-41" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb48-42"><a href="#cb48-42" aria-hidden="true" tabindex="-1"></a>    <span class="cf">while</span> <span class="op">(</span> <span class="dv">0</span> <span class="op">!=</span> read <span class="op">);</span></span>
+<span id="cb48-43"><a href="#cb48-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb48-44"><a href="#cb48-44" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span> <span class="dv">0</span> <span class="op">==</span> n <span class="op">)</span></span>
+<span id="cb48-45"><a href="#cb48-45" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb48-46"><a href="#cb48-46" aria-hidden="true" tabindex="-1"></a>        free<span class="op">(</span> line <span class="op">);</span></span>
+<span id="cb48-47"><a href="#cb48-47" aria-hidden="true" tabindex="-1"></a>        line <span class="op">=</span> NULL<span class="op">;</span></span>
+<span id="cb48-48"><a href="#cb48-48" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb48-49"><a href="#cb48-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb48-50"><a href="#cb48-50" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> line<span class="op">;</span></span>
+<span id="cb48-51"><a href="#cb48-51" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<div class="sourceCode" id="cb49"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a><span class="dt">char</span><span class="op">*</span> readline2<span class="op">(</span> <span class="dt">FILE</span><span class="op">*</span> stream <span class="op">)</span></span>
+<span id="cb49-2"><a href="#cb49-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb49-3"><a href="#cb49-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span>   n    <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb49-4"><a href="#cb49-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span>   sz   <span class="op">=</span> <span class="dv">10000</span><span class="op">;</span></span>
+<span id="cb49-5"><a href="#cb49-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span>   chx  <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb49-6"><a href="#cb49-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">char</span>  ch   <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb49-7"><a href="#cb49-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">char</span><span class="op">*</span> line <span class="op">=</span> calloc<span class="op">(</span> sz <span class="op">+</span> <span class="dv">1</span><span class="op">,</span> <span class="kw">sizeof</span><span class="op">(</span> <span class="dt">char</span> <span class="op">)</span> <span class="op">);</span></span>
+<span id="cb49-8"><a href="#cb49-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb49-9"><a href="#cb49-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">do</span></span>
+<span id="cb49-10"><a href="#cb49-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb49-11"><a href="#cb49-11" aria-hidden="true" tabindex="-1"></a>        chx <span class="op">=</span> fgetc<span class="op">(</span> stream <span class="op">);</span></span>
+<span id="cb49-12"><a href="#cb49-12" aria-hidden="true" tabindex="-1"></a>        ch  <span class="op">=</span> <span class="op">(</span><span class="dt">char</span><span class="op">)</span> chx<span class="op">;</span></span>
+<span id="cb49-13"><a href="#cb49-13" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span> EOF <span class="op">!=</span> chx <span class="op">)</span></span>
+<span id="cb49-14"><a href="#cb49-14" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb49-15"><a href="#cb49-15" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> <span class="op">(</span> chx <span class="op">&gt;</span> <span class="dv">127</span> <span class="op">)</span> fprintf<span class="op">(</span> stderr<span class="op">,</span> <span class="st">&quot;</span><span class="sc">%s</span><span class="st">&quot;</span><span class="op">,</span> <span class="st">&quot;(!!)&quot;</span> <span class="op">);</span></span>
+<span id="cb49-16"><a href="#cb49-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb49-17"><a href="#cb49-17" aria-hidden="true" tabindex="-1"></a>            <span class="cf">switch</span> <span class="op">(</span> ch <span class="op">)</span></span>
+<span id="cb49-18"><a href="#cb49-18" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb49-19"><a href="#cb49-19" aria-hidden="true" tabindex="-1"></a>            <span class="cf">case</span> <span class="ch">&#39;</span><span class="sc">\n</span><span class="ch">&#39;</span><span class="op">:</span></span>
+<span id="cb49-20"><a href="#cb49-20" aria-hidden="true" tabindex="-1"></a>                line<span class="op">[</span>n<span class="op">++]</span> <span class="op">=</span> <span class="ch">&#39;</span><span class="sc">\0</span><span class="ch">&#39;</span><span class="op">;</span></span>
+<span id="cb49-21"><a href="#cb49-21" aria-hidden="true" tabindex="-1"></a>                chx       <span class="op">=</span> EOF<span class="op">;</span></span>
+<span id="cb49-22"><a href="#cb49-22" aria-hidden="true" tabindex="-1"></a>                <span class="cf">break</span><span class="op">;</span></span>
+<span id="cb49-23"><a href="#cb49-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb49-24"><a href="#cb49-24" aria-hidden="true" tabindex="-1"></a>            <span class="cf">default</span><span class="op">:</span></span>
+<span id="cb49-25"><a href="#cb49-25" aria-hidden="true" tabindex="-1"></a>                line<span class="op">[</span>n<span class="op">++]</span> <span class="op">=</span> <span class="op">(</span><span class="dt">char</span><span class="op">)</span> ch<span class="op">;</span></span>
+<span id="cb49-26"><a href="#cb49-26" aria-hidden="true" tabindex="-1"></a>                line<span class="op">[</span>n<span class="op">]</span>   <span class="op">=</span> <span class="ch">&#39;</span><span class="sc">\0</span><span class="ch">&#39;</span><span class="op">;</span></span>
+<span id="cb49-27"><a href="#cb49-27" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb49-28"><a href="#cb49-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb49-29"><a href="#cb49-29" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> <span class="op">(</span> n <span class="op">==</span> sz <span class="op">)</span></span>
+<span id="cb49-30"><a href="#cb49-30" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb49-31"><a href="#cb49-31" aria-hidden="true" tabindex="-1"></a>                sz  <span class="op">*=</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb49-32"><a href="#cb49-32" aria-hidden="true" tabindex="-1"></a>                line <span class="op">=</span> realloc<span class="op">(</span> line<span class="op">,</span> sz <span class="op">);</span></span>
+<span id="cb49-33"><a href="#cb49-33" aria-hidden="true" tabindex="-1"></a>                fprintf<span class="op">(</span> stderr<span class="op">,</span> <span class="st">&quot;</span><span class="sc">%s</span><span class="st">&quot;</span><span class="op">,</span> <span class="st">&quot;#&quot;</span> <span class="op">);</span></span>
+<span id="cb49-34"><a href="#cb49-34" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb49-35"><a href="#cb49-35" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb49-36"><a href="#cb49-36" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb49-37"><a href="#cb49-37" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb49-38"><a href="#cb49-38" aria-hidden="true" tabindex="-1"></a>    <span class="cf">while</span> <span class="op">(</span> EOF <span class="op">!=</span> chx <span class="op">);</span></span>
+<span id="cb49-39"><a href="#cb49-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb49-40"><a href="#cb49-40" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span> <span class="dv">0</span> <span class="op">==</span> n <span class="op">)</span></span>
+<span id="cb49-41"><a href="#cb49-41" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb49-42"><a href="#cb49-42" aria-hidden="true" tabindex="-1"></a>        free<span class="op">(</span> line <span class="op">);</span></span>
+<span id="cb49-43"><a href="#cb49-43" aria-hidden="true" tabindex="-1"></a>        line <span class="op">=</span> NULL<span class="op">;</span></span>
+<span id="cb49-44"><a href="#cb49-44" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb49-45"><a href="#cb49-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb49-46"><a href="#cb49-46" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> line<span class="op">;</span></span>
+<span id="cb49-47"><a href="#cb49-47" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="function-setnonblocking">Function: setNonBlocking</h4>
+<div class="sourceCode" id="cb50"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> setNonBlocking<span class="op">(</span> <span class="dt">int</span> fd <span class="op">)</span></span>
+<span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb50-3"><a href="#cb50-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> flags <span class="op">=</span> fcntl<span class="op">(</span> fd<span class="op">,</span> F_GETFL<span class="op">,</span> <span class="dv">0</span> <span class="op">);</span></span>
+<span id="cb50-4"><a href="#cb50-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-5"><a href="#cb50-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span> <span class="op">-</span><span class="dv">1</span> <span class="op">==</span> flags <span class="op">)</span></span>
+<span id="cb50-6"><a href="#cb50-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb50-7"><a href="#cb50-7" aria-hidden="true" tabindex="-1"></a>        perror<span class="op">(</span> <span class="st">&quot;F_GETFL&quot;</span> <span class="op">);</span></span>
+<span id="cb50-8"><a href="#cb50-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb50-9"><a href="#cb50-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span></span>
+<span id="cb50-10"><a href="#cb50-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span> <span class="op">-</span><span class="dv">1</span> <span class="op">==</span> fcntl<span class="op">(</span> fd<span class="op">,</span> F_SETFL<span class="op">,</span> flags <span class="op">|</span> O_NONBLOCK <span class="op">)</span> <span class="op">)</span></span>
+<span id="cb50-11"><a href="#cb50-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb50-12"><a href="#cb50-12" aria-hidden="true" tabindex="-1"></a>        perror<span class="op">(</span> <span class="st">&quot;F_SETFL&quot;</span> <span class="op">);</span></span>
+<span id="cb50-13"><a href="#cb50-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb50-14"><a href="#cb50-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-15"><a href="#cb50-15" aria-hidden="true" tabindex="-1"></a>    <span class="co">//fcntl( fd, F_SETPIPE_SZ, 64000 );</span></span>
+<span id="cb50-16"><a href="#cb50-16" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="function-stringappend">Function: stringAppend</h4>
+<div class="sourceCode" id="cb51"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a><span class="dt">char</span><span class="op">*</span> stringAppend<span class="op">(</span> <span class="dt">char</span><span class="op">*</span> orig<span class="op">,</span> <span class="dt">char</span> sep<span class="op">,</span> <span class="dt">const</span> <span class="dt">char</span><span class="op">*</span> suffix <span class="op">)</span></span>
+<span id="cb51-2"><a href="#cb51-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb51-3"><a href="#cb51-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">char</span><span class="op">*</span> dst <span class="op">=</span> NULL<span class="op">;</span></span>
+<span id="cb51-4"><a href="#cb51-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb51-5"><a href="#cb51-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span> orig <span class="op">)</span></span>
+<span id="cb51-6"><a href="#cb51-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb51-7"><a href="#cb51-7" aria-hidden="true" tabindex="-1"></a>        <span class="dt">int</span> len_orig   <span class="op">=</span> strlen<span class="op">(</span> orig   <span class="op">);</span></span>
+<span id="cb51-8"><a href="#cb51-8" aria-hidden="true" tabindex="-1"></a>        <span class="dt">int</span> len_suffix <span class="op">=</span> strlen<span class="op">(</span> suffix <span class="op">);</span></span>
+<span id="cb51-9"><a href="#cb51-9" aria-hidden="true" tabindex="-1"></a>        <span class="dt">int</span> len_sep    <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb51-10"><a href="#cb51-10" aria-hidden="true" tabindex="-1"></a>        <span class="dt">int</span> len_new    <span class="op">=</span> len_orig <span class="op">+</span> len_suffix <span class="op">+</span> len_sep <span class="op">+</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb51-11"><a href="#cb51-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb51-12"><a href="#cb51-12" aria-hidden="true" tabindex="-1"></a>        dst <span class="op">=</span> calloc<span class="op">(</span> len_new<span class="op">,</span> <span class="kw">sizeof</span><span class="op">(</span> <span class="dt">char</span> <span class="op">)</span> <span class="op">);</span></span>
+<span id="cb51-13"><a href="#cb51-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb51-14"><a href="#cb51-14" aria-hidden="true" tabindex="-1"></a>        strncpy<span class="op">(</span> dst<span class="op">,</span>                        orig<span class="op">,</span> len_orig   <span class="op">);</span></span>
+<span id="cb51-15"><a href="#cb51-15" aria-hidden="true" tabindex="-1"></a>        strncpy<span class="op">(</span> dst <span class="op">+</span> len_orig<span class="op">,</span>             <span class="op">&amp;</span>sep<span class="op">,</span> len_sep    <span class="op">);</span></span>
+<span id="cb51-16"><a href="#cb51-16" aria-hidden="true" tabindex="-1"></a>        strncpy<span class="op">(</span> dst <span class="op">+</span> len_orig <span class="op">+</span> len_sep<span class="op">,</span> suffix<span class="op">,</span> len_suffix <span class="op">);</span></span>
+<span id="cb51-17"><a href="#cb51-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb51-18"><a href="#cb51-18" aria-hidden="true" tabindex="-1"></a>        free<span class="op">(</span> orig <span class="op">);</span></span>
+<span id="cb51-19"><a href="#cb51-19" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb51-20"><a href="#cb51-20" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span></span>
+<span id="cb51-21"><a href="#cb51-21" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb51-22"><a href="#cb51-22" aria-hidden="true" tabindex="-1"></a>        dst <span class="op">=</span> stringCopy<span class="op">(</span> suffix <span class="op">);</span></span>
+<span id="cb51-23"><a href="#cb51-23" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb51-24"><a href="#cb51-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb51-25"><a href="#cb51-25" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> dst<span class="op">;</span></span>
+<span id="cb51-26"><a href="#cb51-26" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="function-stringcopy">Function: stringCopy</h4>
+<div class="sourceCode" id="cb52"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a><span class="dt">char</span><span class="op">*</span> stringCat<span class="op">(</span> <span class="dt">const</span> <span class="dt">char</span><span class="op">*</span> a<span class="op">,</span> <span class="dt">const</span> <span class="dt">char</span><span class="op">*</span> b <span class="op">)</span></span>
+<span id="cb52-2"><a href="#cb52-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb52-3"><a href="#cb52-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span>   n1  <span class="op">=</span> strlen<span class="op">(</span> a <span class="op">);</span></span>
+<span id="cb52-4"><a href="#cb52-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span>   n2  <span class="op">=</span> strlen<span class="op">(</span> b <span class="op">);</span></span>
+<span id="cb52-5"><a href="#cb52-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">char</span><span class="op">*</span> dst <span class="op">=</span> calloc<span class="op">(</span> n1 <span class="op">+</span> n2 <span class="op">+</span> <span class="dv">1</span><span class="op">,</span> <span class="kw">sizeof</span><span class="op">(</span> <span class="dt">char</span> <span class="op">)</span> <span class="op">);</span></span>
+<span id="cb52-6"><a href="#cb52-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-7"><a href="#cb52-7" aria-hidden="true" tabindex="-1"></a>    strncpy<span class="op">(</span> dst<span class="op">,</span>      a<span class="op">,</span> n1 <span class="op">);</span></span>
+<span id="cb52-8"><a href="#cb52-8" aria-hidden="true" tabindex="-1"></a>    strncpy<span class="op">(</span> dst <span class="op">+</span> n1<span class="op">,</span> b<span class="op">,</span> n2 <span class="op">);</span></span>
+<span id="cb52-9"><a href="#cb52-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb52-10"><a href="#cb52-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> dst<span class="op">;</span></span>
+<span id="cb52-11"><a href="#cb52-11" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="function-stringcopy-1">Function: stringCopy</h4>
+<div class="sourceCode" id="cb53"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a><span class="dt">char</span><span class="op">*</span> stringCopy<span class="op">(</span> <span class="dt">const</span> <span class="dt">char</span><span class="op">*</span> src <span class="op">)</span></span>
+<span id="cb53-2"><a href="#cb53-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb53-3"><a href="#cb53-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span>   n   <span class="op">=</span> strlen<span class="op">(</span> src <span class="op">);</span></span>
+<span id="cb53-4"><a href="#cb53-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">char</span><span class="op">*</span> dst <span class="op">=</span> calloc<span class="op">(</span> n <span class="op">+</span> <span class="dv">1</span><span class="op">,</span> <span class="kw">sizeof</span><span class="op">(</span> <span class="dt">char</span> <span class="op">)</span> <span class="op">);</span></span>
+<span id="cb53-5"><a href="#cb53-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb53-6"><a href="#cb53-6" aria-hidden="true" tabindex="-1"></a>    strncpy<span class="op">(</span> dst<span class="op">,</span> src<span class="op">,</span> n <span class="op">);</span></span>
+<span id="cb53-7"><a href="#cb53-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb53-8"><a href="#cb53-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> dst<span class="op">;</span></span>
+<span id="cb53-9"><a href="#cb53-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <h4 id="function-stringequals">Function: stringEquals</h4>
-<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">int</span> stringEquals( <span class="dt">const</span> <span class="dt">char</span>* one, <span class="dt">const</span> <span class="dt">char</span>* two )
-{
-    <span class="dt">int</span> l1 = strlen( one );
-    <span class="dt">int</span> l2 = strlen( two );
-
-    <span class="cf">return</span> (l1 == l2) &amp;&amp; (<span class="dv">0</span> == strncmp( one, two, l1 ));
-}</code></pre></div>
+<div class="sourceCode" id="cb54"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> stringEquals<span class="op">(</span> <span class="dt">const</span> <span class="dt">char</span><span class="op">*</span> one<span class="op">,</span> <span class="dt">const</span> <span class="dt">char</span><span class="op">*</span> two <span class="op">)</span></span>
+<span id="cb54-2"><a href="#cb54-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb54-3"><a href="#cb54-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> l1 <span class="op">=</span> strlen<span class="op">(</span> one <span class="op">);</span></span>
+<span id="cb54-4"><a href="#cb54-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> l2 <span class="op">=</span> strlen<span class="op">(</span> two <span class="op">);</span></span>
+<span id="cb54-5"><a href="#cb54-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb54-6"><a href="#cb54-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="op">(</span>l1 <span class="op">==</span> l2<span class="op">)</span> <span class="op">&amp;&amp;</span> <span class="op">(</span><span class="dv">0</span> <span class="op">==</span> strncmp<span class="op">(</span> one<span class="op">,</span> two<span class="op">,</span> l1 <span class="op">));</span></span>
+<span id="cb54-7"><a href="#cb54-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <h4 id="function-stringhasprefix">Function: stringHasPrefix</h4>
-<div class="sourceCode"><pre class="sourceCode main.c"><code class="sourceCode c"><span class="dt">int</span> stringHasPrefix( <span class="dt">const</span> <span class="dt">char</span>* string, <span class="dt">const</span> <span class="dt">char</span>* prefix )
-{
-    <span class="dt">int</span> len = strlen( prefix );
-
-    <span class="cf">return</span> (<span class="dv">0</span> == strncmp( string, prefix, len ));
-}</code></pre></div>
+<div class="sourceCode" id="cb55"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> stringHasPrefix<span class="op">(</span> <span class="dt">const</span> <span class="dt">char</span><span class="op">*</span> string<span class="op">,</span> <span class="dt">const</span> <span class="dt">char</span><span class="op">*</span> prefix <span class="op">)</span></span>
+<span id="cb55-2"><a href="#cb55-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb55-3"><a href="#cb55-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span> len <span class="op">=</span> strlen<span class="op">(</span> prefix <span class="op">);</span></span>
+<span id="cb55-4"><a href="#cb55-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb55-5"><a href="#cb55-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="op">(</span><span class="dv">0</span> <span class="op">==</span> strncmp<span class="op">(</span> string<span class="op">,</span> prefix<span class="op">,</span> len <span class="op">));</span></span>
+<span id="cb55-6"><a href="#cb55-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="adt-patterns">ADT: Patterns</h4>
+<div class="sourceCode" id="cb56"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> _Patterns</span>
+<span id="cb56-2"><a href="#cb56-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb56-3"><a href="#cb56-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">char</span><span class="op">**</span>   names<span class="op">;</span></span>
+<span id="cb56-4"><a href="#cb56-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">FILE</span><span class="op">**</span>   memstreams<span class="op">;</span></span>
+<span id="cb56-5"><a href="#cb56-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">char</span><span class="op">**</span>   membuffers<span class="op">;</span></span>
+<span id="cb56-6"><a href="#cb56-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">size_t</span><span class="op">*</span>  memsize<span class="op">;</span></span>
+<span id="cb56-7"><a href="#cb56-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb56-8"><a href="#cb56-8" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span>      next<span class="op">;</span></span>
+<span id="cb56-9"><a href="#cb56-9" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span>      max<span class="op">;</span></span>
+<span id="cb56-10"><a href="#cb56-10" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span></code></pre></div>
+<div class="sourceCode" id="cb57"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a>Patterns<span class="op">*</span></span>
+<span id="cb57-2"><a href="#cb57-2" aria-hidden="true" tabindex="-1"></a>Patterns_Populate<span class="op">(</span> <span class="dt">const</span> <span class="dt">char</span><span class="op">*</span> patterns <span class="op">)</span></span>
+<span id="cb57-3"><a href="#cb57-3" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb57-4"><a href="#cb57-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">char</span><span class="op">*</span> copy  <span class="op">=</span> stringCopy<span class="op">(</span> patterns <span class="op">);</span></span>
+<span id="cb57-5"><a href="#cb57-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">char</span><span class="op">*</span> first <span class="op">=</span> copy<span class="op">;</span></span>
+<span id="cb57-6"><a href="#cb57-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">char</span><span class="op">*</span> end   <span class="op">=</span> copy<span class="op">;</span></span>
+<span id="cb57-7"><a href="#cb57-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span>   max   <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb57-8"><a href="#cb57-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb57-9"><a href="#cb57-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">//  First count the number of extra patterns - number of commas.</span></span>
+<span id="cb57-10"><a href="#cb57-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb57-11"><a href="#cb57-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">while</span> <span class="op">(</span> <span class="op">*</span>end <span class="op">)</span></span>
+<span id="cb57-12"><a href="#cb57-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb57-13"><a href="#cb57-13" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span> <span class="ch">&#39;,&#39;</span> <span class="op">==</span> <span class="op">*</span>end <span class="op">)</span> max<span class="op">++;</span></span>
+<span id="cb57-14"><a href="#cb57-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb57-15"><a href="#cb57-15" aria-hidden="true" tabindex="-1"></a>        end<span class="op">++;</span></span>
+<span id="cb57-16"><a href="#cb57-16" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb57-17"><a href="#cb57-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb57-18"><a href="#cb57-18" aria-hidden="true" tabindex="-1"></a>    Patterns<span class="op">*</span> p <span class="op">=</span> Patterns_new<span class="op">(</span> max <span class="op">);</span></span>
+<span id="cb57-19"><a href="#cb57-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb57-20"><a href="#cb57-20" aria-hidden="true" tabindex="-1"></a>    <span class="co">//  Reset the end point back to start</span></span>
+<span id="cb57-21"><a href="#cb57-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb57-22"><a href="#cb57-22" aria-hidden="true" tabindex="-1"></a>    end <span class="op">=</span> copy<span class="op">;</span></span>
+<span id="cb57-23"><a href="#cb57-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb57-24"><a href="#cb57-24" aria-hidden="true" tabindex="-1"></a>    <span class="cf">while</span> <span class="op">(</span> <span class="op">*</span>end <span class="op">)</span></span>
+<span id="cb57-25"><a href="#cb57-25" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb57-26"><a href="#cb57-26" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span> <span class="ch">&#39;,&#39;</span> <span class="op">==</span> <span class="op">*</span>end <span class="op">)</span></span>
+<span id="cb57-27"><a href="#cb57-27" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb57-28"><a href="#cb57-28" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> <span class="op">(</span> first <span class="op">!=</span> end <span class="op">)</span></span>
+<span id="cb57-29"><a href="#cb57-29" aria-hidden="true" tabindex="-1"></a>            <span class="op">{</span></span>
+<span id="cb57-30"><a href="#cb57-30" aria-hidden="true" tabindex="-1"></a>                <span class="op">*</span>end <span class="op">=</span> <span class="ch">&#39;</span><span class="sc">\0</span><span class="ch">&#39;</span><span class="op">;</span></span>
+<span id="cb57-31"><a href="#cb57-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb57-32"><a href="#cb57-32" aria-hidden="true" tabindex="-1"></a>                Patterns_add<span class="op">(</span> p<span class="op">,</span> first <span class="op">);</span></span>
+<span id="cb57-33"><a href="#cb57-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb57-34"><a href="#cb57-34" aria-hidden="true" tabindex="-1"></a>                first <span class="op">=</span> end <span class="op">+</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb57-35"><a href="#cb57-35" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb57-36"><a href="#cb57-36" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb57-37"><a href="#cb57-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb57-38"><a href="#cb57-38" aria-hidden="true" tabindex="-1"></a>        end<span class="op">++;</span></span>
+<span id="cb57-39"><a href="#cb57-39" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb57-40"><a href="#cb57-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb57-41"><a href="#cb57-41" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span> first <span class="op">!=</span> end <span class="op">)</span></span>
+<span id="cb57-42"><a href="#cb57-42" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb57-43"><a href="#cb57-43" aria-hidden="true" tabindex="-1"></a>        Patterns_add<span class="op">(</span> p<span class="op">,</span> first <span class="op">);</span></span>
+<span id="cb57-44"><a href="#cb57-44" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb57-45"><a href="#cb57-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb57-46"><a href="#cb57-46" aria-hidden="true" tabindex="-1"></a>    free<span class="op">(</span> copy <span class="op">);</span></span>
+<span id="cb57-47"><a href="#cb57-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb57-48"><a href="#cb57-48" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> p<span class="op">;</span></span>
+<span id="cb57-49"><a href="#cb57-49" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<div class="sourceCode" id="cb58"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb58-1"><a href="#cb58-1" aria-hidden="true" tabindex="-1"></a>Patterns<span class="op">*</span></span>
+<span id="cb58-2"><a href="#cb58-2" aria-hidden="true" tabindex="-1"></a>Patterns_new<span class="op">(</span> <span class="dt">int</span> maxSize <span class="op">)</span></span>
+<span id="cb58-3"><a href="#cb58-3" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb58-4"><a href="#cb58-4" aria-hidden="true" tabindex="-1"></a>    Patterns<span class="op">*</span> self <span class="op">=</span> calloc<span class="op">(</span> <span class="dv">1</span><span class="op">,</span> <span class="kw">sizeof</span><span class="op">(</span> Patterns <span class="op">)</span> <span class="op">);</span></span>
+<span id="cb58-5"><a href="#cb58-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span> self <span class="op">)</span></span>
+<span id="cb58-6"><a href="#cb58-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb58-7"><a href="#cb58-7" aria-hidden="true" tabindex="-1"></a>        self<span class="op">-&gt;</span>names      <span class="op">=</span> calloc<span class="op">(</span> maxSize<span class="op">,</span> <span class="kw">sizeof</span><span class="op">(</span> <span class="dt">char</span><span class="op">*</span>   <span class="op">)</span> <span class="op">);</span></span>
+<span id="cb58-8"><a href="#cb58-8" aria-hidden="true" tabindex="-1"></a>        self<span class="op">-&gt;</span>memstreams <span class="op">=</span> calloc<span class="op">(</span> maxSize<span class="op">,</span> <span class="kw">sizeof</span><span class="op">(</span> <span class="dt">FILE</span><span class="op">*</span>   <span class="op">)</span> <span class="op">);</span></span>
+<span id="cb58-9"><a href="#cb58-9" aria-hidden="true" tabindex="-1"></a>        self<span class="op">-&gt;</span>membuffers <span class="op">=</span> calloc<span class="op">(</span> maxSize<span class="op">,</span> <span class="kw">sizeof</span><span class="op">(</span> <span class="dt">char</span><span class="op">*</span>   <span class="op">)</span> <span class="op">);</span></span>
+<span id="cb58-10"><a href="#cb58-10" aria-hidden="true" tabindex="-1"></a>        self<span class="op">-&gt;</span>memsize    <span class="op">=</span> calloc<span class="op">(</span> maxSize<span class="op">,</span> <span class="kw">sizeof</span><span class="op">(</span> <span class="dt">size_t</span>  <span class="op">)</span> <span class="op">);</span></span>
+<span id="cb58-11"><a href="#cb58-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb58-12"><a href="#cb58-12" aria-hidden="true" tabindex="-1"></a>        self<span class="op">-&gt;</span>next    <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb58-13"><a href="#cb58-13" aria-hidden="true" tabindex="-1"></a>        self<span class="op">-&gt;</span>max     <span class="op">=</span> maxSize<span class="op">;</span></span>
+<span id="cb58-14"><a href="#cb58-14" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb58-15"><a href="#cb58-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb58-16"><a href="#cb58-16" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> self<span class="op">;</span></span>
+<span id="cb58-17"><a href="#cb58-17" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<div class="sourceCode" id="cb59"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a>Patterns<span class="op">*</span></span>
+<span id="cb59-2"><a href="#cb59-2" aria-hidden="true" tabindex="-1"></a>Patterns_free<span class="op">(</span> Patterns<span class="op">*</span> self <span class="op">)</span></span>
+<span id="cb59-3"><a href="#cb59-3" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb59-4"><a href="#cb59-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span> self <span class="op">)</span></span>
+<span id="cb59-5"><a href="#cb59-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb59-6"><a href="#cb59-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> <span class="op">(</span> <span class="dt">int</span> i<span class="op">=</span><span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> self<span class="op">-&gt;</span>max<span class="op">;</span> i<span class="op">++</span> <span class="op">)</span></span>
+<span id="cb59-7"><a href="#cb59-7" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb59-8"><a href="#cb59-8" aria-hidden="true" tabindex="-1"></a>            free  <span class="op">(</span> self<span class="op">-&gt;</span>names<span class="op">[</span>i<span class="op">]</span>      <span class="op">);</span></span>
+<span id="cb59-9"><a href="#cb59-9" aria-hidden="true" tabindex="-1"></a>            fclose<span class="op">(</span> self<span class="op">-&gt;</span>memstreams<span class="op">[</span>i<span class="op">]</span> <span class="op">);</span></span>
+<span id="cb59-10"><a href="#cb59-10" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb59-11"><a href="#cb59-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-12"><a href="#cb59-12" aria-hidden="true" tabindex="-1"></a>        self<span class="op">-&gt;</span>next <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb59-13"><a href="#cb59-13" aria-hidden="true" tabindex="-1"></a>        self<span class="op">-&gt;</span>max  <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb59-14"><a href="#cb59-14" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb59-15"><a href="#cb59-15" aria-hidden="true" tabindex="-1"></a>    free<span class="op">(</span> self <span class="op">);</span></span>
+<span id="cb59-16"><a href="#cb59-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-17"><a href="#cb59-17" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> NULL<span class="op">;</span></span>
+<span id="cb59-18"><a href="#cb59-18" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<div class="sourceCode" id="cb60"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb60-1"><a href="#cb60-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span></span>
+<span id="cb60-2"><a href="#cb60-2" aria-hidden="true" tabindex="-1"></a>Patterns_add<span class="op">(</span> Patterns<span class="op">*</span> self<span class="op">,</span> <span class="dt">const</span> <span class="dt">char</span><span class="op">*</span> pattern <span class="op">)</span></span>
+<span id="cb60-3"><a href="#cb60-3" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb60-4"><a href="#cb60-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span> self<span class="op">-&gt;</span>next <span class="op">==</span> self<span class="op">-&gt;</span>max <span class="op">)</span></span>
+<span id="cb60-5"><a href="#cb60-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb60-6"><a href="#cb60-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb60-7"><a href="#cb60-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb60-8"><a href="#cb60-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span></span>
+<span id="cb60-9"><a href="#cb60-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb60-10"><a href="#cb60-10" aria-hidden="true" tabindex="-1"></a>        <span class="dt">FILE</span><span class="op">*</span> memstream</span>
+<span id="cb60-11"><a href="#cb60-11" aria-hidden="true" tabindex="-1"></a>        <span class="op">=</span></span>
+<span id="cb60-12"><a href="#cb60-12" aria-hidden="true" tabindex="-1"></a>        open_memstream</span>
+<span id="cb60-13"><a href="#cb60-13" aria-hidden="true" tabindex="-1"></a>        <span class="op">(</span></span>
+<span id="cb60-14"><a href="#cb60-14" aria-hidden="true" tabindex="-1"></a>            <span class="op">&amp;(</span>self<span class="op">-&gt;</span>membuffers<span class="op">[</span>self<span class="op">-&gt;</span>next<span class="op">]),</span></span>
+<span id="cb60-15"><a href="#cb60-15" aria-hidden="true" tabindex="-1"></a>            <span class="op">&amp;(</span>self<span class="op">-&gt;</span>memsize<span class="op">[</span>self<span class="op">-&gt;</span>next<span class="op">])</span></span>
+<span id="cb60-16"><a href="#cb60-16" aria-hidden="true" tabindex="-1"></a>        <span class="op">);</span></span>
+<span id="cb60-17"><a href="#cb60-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-18"><a href="#cb60-18" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span> <span class="op">!</span>memstream <span class="op">)</span></span>
+<span id="cb60-19"><a href="#cb60-19" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb60-20"><a href="#cb60-20" aria-hidden="true" tabindex="-1"></a>            perror<span class="op">(</span> <span class="st">&quot;Could not instantiate memstream.&quot;</span> <span class="op">);</span></span>
+<span id="cb60-21"><a href="#cb60-21" aria-hidden="true" tabindex="-1"></a>            exit<span class="op">(</span> <span class="op">-</span><span class="dv">1</span> <span class="op">);</span></span>
+<span id="cb60-22"><a href="#cb60-22" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb60-23"><a href="#cb60-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-24"><a href="#cb60-24" aria-hidden="true" tabindex="-1"></a>        self<span class="op">-&gt;</span>names     <span class="op">[</span>self<span class="op">-&gt;</span>next<span class="op">]</span> <span class="op">=</span> stringCopy<span class="op">(</span> pattern  <span class="op">);</span></span>
+<span id="cb60-25"><a href="#cb60-25" aria-hidden="true" tabindex="-1"></a>        self<span class="op">-&gt;</span>memstreams<span class="op">[</span>self<span class="op">-&gt;</span>next<span class="op">]</span> <span class="op">=</span> memstream<span class="op">;</span></span>
+<span id="cb60-26"><a href="#cb60-26" aria-hidden="true" tabindex="-1"></a>        self<span class="op">-&gt;</span>next<span class="op">++;</span></span>
+<span id="cb60-27"><a href="#cb60-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-28"><a href="#cb60-28" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb60-29"><a href="#cb60-29" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb60-30"><a href="#cb60-30" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<div class="sourceCode" id="cb61"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb61-1"><a href="#cb61-1" aria-hidden="true" tabindex="-1"></a><span class="dt">FILE</span><span class="op">*</span></span>
+<span id="cb61-2"><a href="#cb61-2" aria-hidden="true" tabindex="-1"></a>Patterns_retrieveOutputStream<span class="op">(</span> Patterns<span class="op">*</span> self<span class="op">,</span> <span class="dt">const</span> <span class="dt">char</span><span class="op">*</span> pattern <span class="op">)</span></span>
+<span id="cb61-3"><a href="#cb61-3" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb61-4"><a href="#cb61-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">FILE</span><span class="op">*</span> os <span class="op">=</span> NULL<span class="op">;</span></span>
+<span id="cb61-5"><a href="#cb61-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span>   n  <span class="op">=</span> self<span class="op">-&gt;</span>next<span class="op">;</span></span>
+<span id="cb61-6"><a href="#cb61-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb61-7"><a href="#cb61-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="op">(</span> <span class="dt">int</span> i<span class="op">=</span><span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> n<span class="op">;</span> i<span class="op">++</span> <span class="op">)</span></span>
+<span id="cb61-8"><a href="#cb61-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb61-9"><a href="#cb61-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="op">(</span> stringEquals<span class="op">(</span> self<span class="op">-&gt;</span>names<span class="op">[</span>i<span class="op">],</span> pattern <span class="op">)</span> <span class="op">)</span></span>
+<span id="cb61-10"><a href="#cb61-10" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span></span>
+<span id="cb61-11"><a href="#cb61-11" aria-hidden="true" tabindex="-1"></a>            os <span class="op">=</span> self<span class="op">-&gt;</span>memstreams<span class="op">[</span>i<span class="op">];</span></span>
+<span id="cb61-12"><a href="#cb61-12" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb61-13"><a href="#cb61-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb61-14"><a href="#cb61-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb61-15"><a href="#cb61-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> os<span class="op">;</span></span>
+<span id="cb61-16"><a href="#cb61-16" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<div class="sourceCode" id="cb62"><pre
+class="sourceCode main.c"><code class="sourceCode c"><span id="cb62-1"><a href="#cb62-1" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> Patterns_printMemstreamsTo<span class="op">(</span> Patterns<span class="op">*</span> self<span class="op">,</span> <span class="dt">FILE</span><span class="op">*</span> out <span class="op">)</span></span>
+<span id="cb62-2"><a href="#cb62-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb62-3"><a href="#cb62-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">FILE</span><span class="op">*</span>  stream<span class="op">;</span></span>
+<span id="cb62-4"><a href="#cb62-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">char</span><span class="op">*</span>  buffer<span class="op">;</span></span>
+<span id="cb62-5"><a href="#cb62-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">size_t</span> size<span class="op">;</span></span>
+<span id="cb62-6"><a href="#cb62-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">int</span>   n <span class="op">=</span> self<span class="op">-&gt;</span>next<span class="op">;</span></span>
+<span id="cb62-7"><a href="#cb62-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb62-8"><a href="#cb62-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="op">(</span> <span class="dt">int</span> i<span class="op">=</span><span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> n<span class="op">;</span> i<span class="op">++</span> <span class="op">)</span></span>
+<span id="cb62-9"><a href="#cb62-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span></span>
+<span id="cb62-10"><a href="#cb62-10" aria-hidden="true" tabindex="-1"></a>        stream <span class="op">=</span> self<span class="op">-&gt;</span>memstreams<span class="op">[</span>i<span class="op">];</span></span>
+<span id="cb62-11"><a href="#cb62-11" aria-hidden="true" tabindex="-1"></a>        buffer <span class="op">=</span> self<span class="op">-&gt;</span>membuffers<span class="op">[</span>i<span class="op">];</span></span>
+<span id="cb62-12"><a href="#cb62-12" aria-hidden="true" tabindex="-1"></a>        size   <span class="op">=</span> self<span class="op">-&gt;</span>memsize<span class="op">[</span>i<span class="op">];</span></span>
+<span id="cb62-13"><a href="#cb62-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb62-14"><a href="#cb62-14" aria-hidden="true" tabindex="-1"></a>        fflush<span class="op">(</span> stream <span class="op">);</span></span>
+<span id="cb62-15"><a href="#cb62-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb62-16"><a href="#cb62-16" aria-hidden="true" tabindex="-1"></a>        fprintf<span class="op">(</span> out<span class="op">,</span> <span class="st">&quot;</span><span class="sc">%s</span><span class="st">&quot;</span><span class="op">,</span> buffer <span class="op">);</span></span>
+<span id="cb62-17"><a href="#cb62-17" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb62-18"><a href="#cb62-18" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
