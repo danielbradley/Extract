@@ -1,0 +1,180 @@
+... ADT: Patterns
+
+~main.c~
+struct _Patterns
+{
+    char**   names;
+    FILE**   memstreams;
+    char**   membuffers;
+    size_t*  memsize;
+
+    int      next;
+    int      max;
+};
+~
+
+~main.c~
+Patterns*
+Patterns_Populate( const char* patterns )
+{
+    char* copy  = stringCopy( patterns );
+    char* first = copy;
+    char* end   = copy;
+    int   max   = 1;
+
+    //  First count the number of extra patterns - number of commas.
+
+    while ( *end )
+    {
+        if ( ',' == *end ) max++;
+
+        end++;
+    }
+
+    Patterns* p = Patterns_new( max );
+
+    //  Reset the end point back to start
+
+    end = copy;
+
+    while ( *end )
+    {
+        if ( ',' == *end )
+        {
+            if ( first != end )
+            {
+                *end = '\0';
+
+                Patterns_add( p, first );
+
+                first = end + 1;
+            }
+        }
+
+        end++;
+    }
+
+    if ( first != end )
+    {
+        Patterns_add( p, first );
+    }
+
+    free( copy );
+
+    return p;
+}
+~
+
+~main.c~
+Patterns*
+Patterns_new( int maxSize )
+{
+    Patterns* self = calloc( 1, sizeof( Patterns ) );
+    if ( self )
+    {
+        self->names      = calloc( maxSize, sizeof( char*   ) );
+        self->memstreams = calloc( maxSize, sizeof( FILE*   ) );
+        self->membuffers = calloc( maxSize, sizeof( char*   ) );
+        self->memsize    = calloc( maxSize, sizeof( size_t  ) );
+
+        self->next    = 0;
+        self->max     = maxSize;
+    }
+
+    return self;
+}
+~
+
+~main.c~
+Patterns*
+Patterns_free( Patterns* self )
+{
+    if ( self )
+    {
+        for ( int i=0; i < self->max; i++ )
+        {
+            free  ( self->names[i]      );
+            fclose( self->memstreams[i] );
+        }
+
+        self->next = 0;
+        self->max  = 0;
+    }
+    free( self );
+
+    return NULL;
+}
+~
+
+~main.c~
+int
+Patterns_add( Patterns* self, const char* pattern )
+{
+    if ( self->next == self->max )
+    {
+        return 0;
+    }
+    else
+    {
+        FILE* memstream
+        =
+        open_memstream
+        (
+            &(self->membuffers[self->next]),
+            &(self->memsize[self->next])
+        );
+
+        if ( !memstream )
+        {
+            perror( "Could not instantiate memstream." );
+            exit( -1 );
+        }
+
+        self->names     [self->next] = stringCopy( pattern  );
+        self->memstreams[self->next] = memstream;
+        self->next++;
+
+        return 1;
+    }
+}
+~
+
+~main.c~
+FILE*
+Patterns_retrieveOutputStream( Patterns* self, const char* pattern )
+{
+    FILE* os = NULL;
+    int   n  = self->next;
+
+    for ( int i=0; i < n; i++ )
+    {
+        if ( stringEquals( self->names[i], pattern ) )
+        {
+            os = self->memstreams[i];
+        }
+    }
+
+    return os;
+}
+~
+
+~main.c~
+void Patterns_printMemstreamsTo( Patterns* self, FILE* out )
+{
+    FILE*  stream;
+    char*  buffer;
+    size_t size;
+    int   n = self->next;
+
+    for ( int i=0; i < n; i++ )
+    {
+        stream = self->memstreams[i];
+        buffer = self->membuffers[i];
+        size   = self->memsize[i];
+
+        fflush( stream );
+
+        fprintf( out, "%s", buffer );
+    }
+}
+~
