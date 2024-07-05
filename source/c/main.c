@@ -2,6 +2,8 @@
  *  !!! This document has been auto-generated using quasi !!!
  */
 
+#include <fcntl.h>
+
 #include <stdlib.h>
 
 #include <stdio.h>
@@ -12,45 +14,71 @@
 
 typedef int bool;
 
+typedef struct _Patterns Patterns;
+
 #define FALSE 0;
 #define TRUE 1;
 
-static bool DEBUG = FALSE;
-static bool STRIP = FALSE;
+static bool  DEBUG    = FALSE;
+static bool  STRIP    = FALSE;
+static FILE* DEV_NULL = NULL;
 
 int main( int argc, char** argv );
 
 bool argumentsContains( int argc, char** argv, char* flag );
 
-char* argumentsGetValue( int n, char** files, char* flag );
+char* argumentsGetValue    ( int n, char** files, char* flag );
+char* argumentsGetValueList( int n, char** files, char* flag );
 
 int usage();
 
-void tryToProcess( char* file, const char* pattern );
+Patterns* Patterns_Populate( const char* patterns );
 
-void process( FILE*, const char* pattern );
+Patterns* Patterns_new( int maxSize );
+
+int Patterns_add( Patterns* self, const char* pattern );
+
+FILE* Patterns_retrieveOutputStream( Patterns* self, const char* pattern );
+
+void tryToProcess( char* file, Patterns* p );
+
+void process( FILE* stream, Patterns* p );
 
 char* readline( FILE* );
+char* readline2( FILE* );
 
-char* generateDelimiter( const char* prefix, const char* pattern, const char* suffix );
+void processPreformatted( const char* line, FILE* stream, Patterns* p );
 
-void processPreformatted( const char* line, FILE*, const char* pattern );
+char* extractPattern( const char* line );
 
 char* canonicaliseSPGenURL( const char* url );
 
+char* stringAppend( char* orig, char sep, const char* suffix );
+
 int stringEquals( const char* one, const char* two );
 
+char* stringCopy( const char* src );
+
 int stringHasPrefix( const char* string, const char* prefix );
+
+void Patterns_printMemstreamsTo( Patterns* p, FILE* out );
+
+Patterns* Patterns_free( Patterns* self );
 
 int main( int argc, char** argv )
 {
     curl_global_init( CURL_GLOBAL_ALL );
 
-    char* pat = argumentsGetValue( argc, argv, "-p" );
+    DEV_NULL  = fopen( "/dev/null", "a" );
     STRIP     = argumentsContains( argc, argv, "-s" ) ? 1 : 0;
+    char* pat = argumentsGetValue( argc, argv, "-p" );
 
+    if ( !pat )
+    {
+        pat = argumentsGetValueList( argc, argv, "-P" );
+    }
                                         // 1.       2.  3.  4.            5.
-    int expected_arguments = 4 + STRIP; // extract [-s] -p "some pattern" file...
+    int expected_arguments = 4 + STRIP; // extract [-s] -p "some patterns" file...
 
     if ( ! pat )
     {
@@ -69,12 +97,14 @@ int main( int argc, char** argv )
         //  argv[?], pattern which follows '-p'.
         //
 
+        Patterns* p = Patterns_Populate( pat );
+
         int i;
         for ( i = 1; i < argc; i++ )
         {
             if ( '-' != argv[i][0] )
             {
-                tryToProcess( argv[i], pat );
+                tryToProcess( argv[i], p );
             }
             else
             if ( 'p' == argv[i][1] )
@@ -82,6 +112,10 @@ int main( int argc, char** argv )
                 i++;
             }
         }
+
+        Patterns_printMemstreamsTo( p, stdout );
+        
+        Patterns_free( p );
     }
     free( pat );
 
@@ -92,14 +126,14 @@ int main( int argc, char** argv )
 
 int argumentsContains( int n, char** files, char* flag )
 {
-    int b = 0;
+    int b = FALSE;
     int i;
 
     for ( i=0; i < n; i++ )
     {
         if ( stringEquals( flag, files[i] ) )
         {
-            b = 1;
+            b = TRUE;
             i = n;
         }
     }
@@ -123,27 +157,55 @@ char* argumentsGetValue( int n, char** files, char* flag )
     return ret;
 }
 
+char* argumentsGetValueList( int n, char** files, char* flag )
+{
+    char* ret = NULL;
+    int i;
+
+    for ( i=0; i < n; i++ )
+    {
+        if ( stringEquals( flag, files[i] ) )
+        {
+            i++;
+            for ( i=i; i < n; i++ )
+            {
+                if ( stringEquals( "--", files[i] ) )
+                {
+                    i = n;
+                }
+                else
+                {
+                    ret = stringAppend( ret, ',', files[i] );
+                }
+            }
+        }
+    }
+    return ret;
+}
+
 int usage()
 {
-    fprintf( stderr, "Usage:\n\textract [-s] -p <pattern> <file> [more files] [ > output file ]\n" );
+    fprintf( stderr, "Usage:\n\textract [-s] [-p <pattern>] [-P <pattens,...,'--'>] [source file,...]\n" );
     return -1;
 }
 
-void tryToProcess( char* file, const char* pattern )
+void tryToProcess( char* file, Patterns* p )
 {
-    FILE* stream;
+    FILE* stream = NULL;
     if ( (stream = fopen( file, "r" )) )
     {
         if ( DEBUG ) fprintf( stderr, "Processing: %s\n", file );
-        process( stream, pattern );
+
+        process( stream, p );
+
         fclose( stream );
     }
 }
 
-void process( FILE* stream, const char* pattern )
+void process( FILE* stream, Patterns* p )
 {
-    char* line_delimiter = NULL;
     char* line;
+    int   use_new = 1;
 
     do
     {
@@ -153,22 +215,18 @@ void process( FILE* stream, const char* pattern )
             switch ( line[0] )
             {
             case '~':
-                line_delimiter = generateDelimiter( "~", pattern, "~" );
                 if ( DEBUG ) fprintf( stderr, "@%s", line );
-                processPreformatted( line, stream, line_delimiter );
-                free( line_delimiter );
+                if ( 1 ) processPreformatted( line, stream, p );
                 break;
-
+        
             case '`':
-                line_delimiter = generateDelimiter( "```", pattern, "" );
                 if ( ('`' == line[1]) && ('`' == line[2]) )
                 {
                     if ( DEBUG ) fprintf( stderr, "@%s", line );
-                    processPreformatted( line, stream, line_delimiter );
+                    if ( 1 ) processPreformatted( line, stream, p );
                 }
-                free( line_delimiter );
                 break;
-
+        
             default:
                 if ( DEBUG ) fprintf( stderr, "@%s", line );
             }
@@ -177,42 +235,43 @@ void process( FILE* stream, const char* pattern )
     } while ( line );
 }
 
-char* generateDelimiter( const char* prefix, const char* pattern, const char* suffix )
+void processPreformatted( const char* line, FILE* in, Patterns* p )
 {
-    char* delimiter = calloc( strlen( prefix ) + strlen( pattern ) + strlen( suffix ) + 1, sizeof(char) );
-    char* tmp       = delimiter;
-          tmp       = stpcpy( tmp, prefix  );
-          tmp       = stpcpy( tmp, pattern );
-          tmp       = stpcpy( tmp, suffix  );
+    char* pattern = extractPattern( line );
+    FILE* out     = Patterns_retrieveOutputStream( p, pattern );
+    bool  writing = (NULL != out);
 
-    return delimiter;
-}
-
-void processPreformatted( const char* line, FILE* stream, const char* line_delimiter )
-{
-    int    loop = 1;
-    char*  pre;
-    char*  bp;
-    size_t size;
-
-    FILE* dev_null = fopen( "/dev/null", "a" );
-    FILE* out      = dev_null;
-
-    if ( stringHasPrefix( line, line_delimiter ) )
+    if ( !out )
     {
-        if ( stringEquals( "~spgen~", line_delimiter ) )
+        out = DEV_NULL;
+    }
+
+    int    loop = 1;
+    char*  pre  = NULL;
+    char*  bp   = NULL;
+    size_t size = 0;
+
+    FILE*  buf  = NULL;
+    FILE*  os   = NULL;
+
+    if ( writing && stringEquals( "spgen", pattern ) )
+    {
+        buf = open_memstream( &bp, &size );
+        if ( !buf )
         {
-            out = open_memstream( &bp, &size );
+            perror( "Could not instantiate mem stream." );
+            exit( -1 );
         }
-        else
-        {
-            out = stdout;
-        }
+        os  = buf;
+    }
+    else
+    {
+        os = out;
     }
 
     do
     {
-        pre = readline( stream );
+        pre = readline( in );
         if ( pre )
         {
             if ( STRIP )
@@ -225,7 +284,7 @@ void processPreformatted( const char* line, FILE* stream, const char* line_delim
                     break;
 
                 case '/':
-                    if ( '/' == pre[1] ) fprintf( out, ";\n" );
+                    if ( '/' == pre[1] ) fprintf( os, ";\n" );
                     break;
 
                 case 'D':
@@ -237,7 +296,7 @@ void processPreformatted( const char* line, FILE* stream, const char* line_delim
                     // fall through
 
                 default:
-                    fprintf( out, "%s", pre );
+                    fprintf( os, "%s", pre );
                 }
             }
             else
@@ -245,6 +304,7 @@ void processPreformatted( const char* line, FILE* stream, const char* line_delim
                 switch ( pre[0] )
                 {
                 case '~':
+                case '`':
                     if ( DEBUG ) fprintf( stderr, "@%s", pre );
                     loop = 0;
                     break;
@@ -256,7 +316,7 @@ void processPreformatted( const char* line, FILE* stream, const char* line_delim
                     // fall through
 
                 default:
-                    fprintf( out, "%s", pre );
+                    fprintf( os, "%s", pre );
                 }
             }
 
@@ -267,11 +327,13 @@ void processPreformatted( const char* line, FILE* stream, const char* line_delim
     }
     while ( loop );
 
-    fflush( out );
+    fflush( os );
 
-    if ( stringHasPrefix( line, line_delimiter ) )
+    /* If 'buf' is set we need to use it's contents and call 'spgen' and write the result to 'out'. */
+
+    if ( buf )
     {
-        if ( stringEquals( "~spgen~", line_delimiter ) )
+        if ( stringEquals( "spgen", pattern ) )
         {
             char* host     = "http://sqlgen.azurewebsites.net/api/sqlgenerate/";
             char* field    = "table_info=";
@@ -283,20 +345,59 @@ void processPreformatted( const char* line, FILE* stream, const char* line_delim
             {
                 sprintf( postdata, "%s%s", field, encoded );
 
-                curl_easy_setopt ( handle, CURLOPT_URL, host );
-                curl_easy_setopt ( handle, CURLOPT_POST, 1L );
+                curl_easy_setopt ( handle, CURLOPT_URL,        host     );
+                curl_easy_setopt ( handle, CURLOPT_POST,       1L       );
                 curl_easy_setopt ( handle, CURLOPT_POSTFIELDS, postdata );
+                curl_easy_setopt ( handle, CURLOPT_WRITEDATA,  out      ); // <------ Writing to 'out'
                 curl_easy_perform( handle );
                 curl_easy_cleanup( handle );
             }
             free( postdata );
             curl_free( encoded );
-
-            fclose( out );
         }
+        fclose( buf );
     }
 
-    fclose( dev_null );
+    fflush( out );
+}
+
+char* extractPattern( const char* line )
+{
+    char* pattern = NULL;
+    {
+        char* copy = stringCopy( line );
+        char* tmp  = copy;
+        int   len;
+
+        while ( ('~' == *tmp) || ('`' == *tmp) ) tmp++;
+
+        len = strlen( tmp );
+
+        int loop = TRUE;
+        do
+        {
+            switch ( tmp[len-1] )
+            {
+                case ' ':
+                case '\t':
+                case '\n':
+                case '~':
+                case '`':
+                    tmp[len-1] = '\0';
+                    len--;
+                    break;
+                
+                default:
+                    loop = FALSE;
+            }
+        }
+        while ( len && loop );
+
+        pattern = stringCopy( tmp );
+
+        free( copy );
+    }
+    return pattern;
 }
 
 char* canonicaliseSPGenURL( const char* url )
@@ -333,7 +434,12 @@ char* readline( FILE* stream )
     do
     {
         read = fread( ch, sizeof(char), 1, stream );
-        if ( read )
+        if ( -1 == read )
+        {
+            read = 0;
+        }
+        else
+        if ( read > 0 )
         {
             if ( *ch > 127 ) fprintf( stderr, "%s", "(!!)" );
 
@@ -369,6 +475,120 @@ char* readline( FILE* stream )
     return line;
 }
 
+char* readline2( FILE* stream )
+{
+    int   n    = 0;
+    int   sz   = 10000;
+    int   chx  = 0;
+    char  ch   = 0;
+    char* line = calloc( sz + 1, sizeof( char ) );
+
+    do
+    {
+        chx = fgetc( stream );
+        ch  = (char) chx;
+        if ( EOF != chx )
+        {
+            if ( chx > 127 ) fprintf( stderr, "%s", "(!!)" );
+
+            switch ( ch )
+            {
+            case '\n':
+                line[n++] = '\0';
+                chx       = EOF;
+                break;
+
+            default:
+                line[n++] = (char) ch;
+                line[n]   = '\0';
+            }
+
+            if ( n == sz )
+            {
+                sz  *= 2;
+                line = realloc( line, sz );
+                fprintf( stderr, "%s", "#" );
+            }
+        }
+        
+    }
+    while ( EOF != chx );
+
+    if ( 0 == n )
+    {
+        free( line );
+        line = NULL;
+    }
+
+    return line;
+}
+
+void setNonBlocking( int fd )
+{
+    int flags = fcntl( fd, F_GETFL, 0 );
+
+    if ( -1 == flags )
+    {
+        perror( "F_GETFL" );
+    }
+    else
+    if ( -1 == fcntl( fd, F_SETFL, flags | O_NONBLOCK ) )
+    {
+        perror( "F_SETFL" );
+    }
+
+    //fcntl( fd, F_SETPIPE_SZ, 64000 );
+}
+
+char* stringAppend( char* orig, char sep, const char* suffix )
+{
+    char* dst = NULL;
+
+    if ( orig )
+    {
+        int len_orig   = strlen( orig   );
+        int len_suffix = strlen( suffix );
+        int len_sep    = 1;
+        int len_new    = len_orig + len_suffix + len_sep + 1;
+
+        dst = calloc( len_new, sizeof( char ) );
+
+        strncpy( dst,                        orig, len_orig   );
+        strncpy( dst + len_orig,             &sep, len_sep    );
+        strncpy( dst + len_orig + len_sep, suffix, len_suffix );
+
+        free( orig );
+    }
+    else
+    {
+        dst = stringCopy( suffix );
+    }
+
+    return dst;
+}
+
+char* stringCat( const char* a, const char* b )
+{
+    int   n1  = strlen( a );
+    int   n2  = strlen( b );
+    char* dst = calloc( n1 + n2 + 1, sizeof( char ) );
+
+    strncpy( dst,      a, n1 );
+    strncpy( dst + n1, b, n2 );
+
+    return dst;
+}
+
+char* stringCopy( const char* src )
+{
+    int   n   = strlen( src );
+    char* dst = calloc( n + 1, sizeof( char ) );
+
+    strncpy( dst, src, n );
+
+    return dst;
+}
+
 int stringEquals( const char* one, const char* two )
 {
     int l1 = strlen( one );
@@ -382,5 +602,170 @@ int stringHasPrefix( const char* string, const char* prefix )
     int len = strlen( prefix );
 
     return (0 == strncmp( string, prefix, len ));
+}
+
+struct _Patterns
+{
+    char**   names;
+    FILE**   memstreams;
+    char**   membuffers;
+    size_t*  memsize;
+
+    int      next;
+    int      max;
+};
+
+Patterns*
+Patterns_Populate( const char* patterns )
+{
+    char* copy  = stringCopy( patterns );
+    char* first = copy;
+    char* end   = copy;
+    int   max   = 1;
+
+    //  First count the number of extra patterns - number of commas.
+
+    while ( *end )
+    {
+        if ( ',' == *end ) max++;
+
+        end++;
+    }
+
+    Patterns* p = Patterns_new( max );
+
+    //  Reset the end point back to start
+
+    end = copy;
+
+    while ( *end )
+    {
+        if ( ',' == *end )
+        {
+            if ( first != end )
+            {
+                *end = '\0';
+
+                Patterns_add( p, first );
+
+                first = end + 1;
+            }
+        }
+
+        end++;
+    }
+
+    if ( first != end )
+    {
+        Patterns_add( p, first );
+    }
+
+    free( copy );
+
+    return p;
+}
+
+Patterns*
+Patterns_new( int maxSize )
+{
+    Patterns* self = calloc( 1, sizeof( Patterns ) );
+    if ( self )
+    {
+        self->names      = calloc( maxSize, sizeof( char*   ) );
+        self->memstreams = calloc( maxSize, sizeof( FILE*   ) );
+        self->membuffers = calloc( maxSize, sizeof( char*   ) );
+        self->memsize    = calloc( maxSize, sizeof( size_t  ) );
+
+        self->next    = 0;
+        self->max     = maxSize;
+    }
+
+    return self;
+}
+
+Patterns*
+Patterns_free( Patterns* self )
+{
+    if ( self )
+    {
+        for ( int i=0; i < self->max; i++ )
+        {
+            free  ( self->names[i]      );
+            fclose( self->memstreams[i] );
+        }
+
+        self->next = 0;
+        self->max  = 0;
+    }
+    free( self );
+
+    return NULL;
+}
+
+int
+Patterns_add( Patterns* self, const char* pattern )
+{
+    if ( self->next == self->max )
+    {
+        return 0;
+    }
+    else
+    {
+        FILE* memstream
+        =
+        open_memstream
+        (
+            &(self->membuffers[self->next]),
+            &(self->memsize[self->next])
+        );
+
+        if ( !memstream )
+        {
+            perror( "Could not instantiate memstream." );
+            exit( -1 );
+        }
+
+        self->names     [self->next] = stringCopy( pattern  );
+        self->memstreams[self->next] = memstream;
+        self->next++;
+
+        return 1;
+    }
+}
+
+FILE*
+Patterns_retrieveOutputStream( Patterns* self, const char* pattern )
+{
+    FILE* os = NULL;
+    int   n  = self->next;
+
+    for ( int i=0; i < n; i++ )
+    {
+        if ( stringEquals( self->names[i], pattern ) )
+        {
+            os = self->memstreams[i];
+        }
+    }
+
+    return os;
+}
+
+void Patterns_printMemstreamsTo( Patterns* self, FILE* out )
+{
+    FILE*  stream;
+    char*  buffer;
+    size_t size;
+    int   n = self->next;
+
+    for ( int i=0; i < n; i++ )
+    {
+        stream = self->memstreams[i];
+        buffer = self->membuffers[i];
+        size   = self->memsize[i];
+
+        fflush( stream );
+
+        fprintf( out, "%s", buffer );
+    }
 }
 
