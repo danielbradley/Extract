@@ -45,7 +45,6 @@ void tryToProcess( char* file, Patterns* p );
 void process( FILE* stream, Patterns* p );
 
 char* readline( FILE* );
-char* readline2( FILE* );
 
 void processPreformatted( const char* line, FILE* stream, Patterns* p );
 
@@ -335,25 +334,36 @@ void processPreformatted( const char* line, FILE* in, Patterns* p )
     {
         if ( stringEquals( "spgen", pattern ) )
         {
-            char* host     = "http://sqlgen.azurewebsites.net/api/sqlgenerate/";
-            char* field    = "table_info=";
-            char* data     = canonicaliseSPGenURL( bp );
+            FILE* file = popen( "sqlgen", "w" );
 
-            void* handle   = curl_easy_init();
-            char* encoded  = curl_easy_escape( handle, data, 0 );
-            char* postdata = calloc( strlen( field ) + strlen( encoded ) + 1, sizeof(char) );
+            if ( file )
             {
-                sprintf( postdata, "%s%s", field, encoded );
+                fprintf( file, "%s", bp );
 
-                curl_easy_setopt ( handle, CURLOPT_URL,        host     );
-                curl_easy_setopt ( handle, CURLOPT_POST,       1L       );
-                curl_easy_setopt ( handle, CURLOPT_POSTFIELDS, postdata );
-                curl_easy_setopt ( handle, CURLOPT_WRITEDATA,  out      ); // <------ Writing to 'out'
-                curl_easy_perform( handle );
-                curl_easy_cleanup( handle );
+                pclose( file );
             }
-            free( postdata );
-            curl_free( encoded );
+            else
+            {
+                char* host     = "http://sqlgen.azurewebsites.net/api/sqlgenerate/";
+                char* field    = "table_info=";
+                char* data     = canonicaliseSPGenURL( bp );
+
+                void* handle   = curl_easy_init();
+                char* encoded  = curl_easy_escape( handle, data, 0 );
+                char* postdata = calloc( strlen( field ) + strlen( encoded ) + 1, sizeof(char) );
+                {
+                    sprintf( postdata, "%s%s", field, encoded );
+
+                    curl_easy_setopt ( handle, CURLOPT_URL,        host     );
+                    curl_easy_setopt ( handle, CURLOPT_POST,       1L       );
+                    curl_easy_setopt ( handle, CURLOPT_POSTFIELDS, postdata );
+                    curl_easy_setopt ( handle, CURLOPT_WRITEDATA,  out      ); // <------ Writing to 'out'
+                    curl_easy_perform( handle );
+                    curl_easy_cleanup( handle );
+                }
+                free( postdata );
+                curl_free( encoded );
+            }
         }
         fclose( buf );
     }

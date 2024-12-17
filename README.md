@@ -8,7 +8,7 @@ as is provided in the file GNU_GPL_License_v3.txt
 
 ## Introduction
 
-"Extract" is a command line tool for extracting SQL and other code
+'Extract' is a command line tool for extracting SQL and other code
 from marked up text files that are able to represent pre-formatted text sections.
 
 Currently, two such text formats are explicitly supported - Markdown and MaxText.
@@ -279,7 +279,6 @@ until an end delimiter is encountered.
 
 ```main.c
 char* readline( FILE* );
-char* readline2( FILE* );
 ```
 
 The 'readline' function reimplements the UNIX readline function for portability.
@@ -602,21 +601,17 @@ char* generateDelimiter( const char* prefix, const char* pattern, const char* su
 
 #### Function: processPreformatted
 
+The 'processPreformatted' function processes each line within the encountered preformatted section.
+The function will return once an end delimiter is encountered.
+
 If the passed line matches a pattern in 'p',
-we will copy characters from 'in' into 'out'; otherwise we will copy to dev null.
+the content will be copied into the mem stream associated with that pattern;
+otherwise the content will be copied to dev null.
 
-However, if that pattern is 'spgen',
-we want to process that content using the spgen web service then copy the response to out.
+However, if the pattern is 'spgen',
+we want to instead process that content using the spgen web service then copy the returned response to the mem stream.
 To achive this we will use a dummy stream called 'os'.
-If the pattern is 'spgen', we will make 'os' be a temporary buffer, otherwise it will be out.
-
-
-
-If the pattern is "spgen",
-we want to read the characters into a temporary buffer 'buf',
-which we will then use to query spgen.org,
-and then we will write the response to out.
-
+If the pattern is 'spgen', we will make 'os' be a temporary buffer, otherwise it will be the pattern's mem stream.
 
 ```main.c
 void processPreformatted( const char* line, FILE* in, Patterns* p )
@@ -719,25 +714,36 @@ void processPreformatted( const char* line, FILE* in, Patterns* p )
     {
         if ( stringEquals( "spgen", pattern ) )
         {
-            char* host     = "http://sqlgen.azurewebsites.net/api/sqlgenerate/";
-            char* field    = "table_info=";
-            char* data     = canonicaliseSPGenURL( bp );
+            FILE* file = popen( "sqlgen", "w" );
 
-            void* handle   = curl_easy_init();
-            char* encoded  = curl_easy_escape( handle, data, 0 );
-            char* postdata = calloc( strlen( field ) + strlen( encoded ) + 1, sizeof(char) );
+            if ( file )
             {
-                sprintf( postdata, "%s%s", field, encoded );
+                fprintf( file, "%s", bp );
 
-                curl_easy_setopt ( handle, CURLOPT_URL,        host     );
-                curl_easy_setopt ( handle, CURLOPT_POST,       1L       );
-                curl_easy_setopt ( handle, CURLOPT_POSTFIELDS, postdata );
-                curl_easy_setopt ( handle, CURLOPT_WRITEDATA,  out      ); // <------ Writing to 'out'
-                curl_easy_perform( handle );
-                curl_easy_cleanup( handle );
+                pclose( file );
             }
-            free( postdata );
-            curl_free( encoded );
+            else
+            {
+                char* host     = "http://sqlgen.azurewebsites.net/api/sqlgenerate/";
+                char* field    = "table_info=";
+                char* data     = canonicaliseSPGenURL( bp );
+
+                void* handle   = curl_easy_init();
+                char* encoded  = curl_easy_escape( handle, data, 0 );
+                char* postdata = calloc( strlen( field ) + strlen( encoded ) + 1, sizeof(char) );
+                {
+                    sprintf( postdata, "%s%s", field, encoded );
+
+                    curl_easy_setopt ( handle, CURLOPT_URL,        host     );
+                    curl_easy_setopt ( handle, CURLOPT_POST,       1L       );
+                    curl_easy_setopt ( handle, CURLOPT_POSTFIELDS, postdata );
+                    curl_easy_setopt ( handle, CURLOPT_WRITEDATA,  out      ); // <------ Writing to 'out'
+                    curl_easy_perform( handle );
+                    curl_easy_cleanup( handle );
+                }
+                free( postdata );
+                curl_free( encoded );
+            }
         }
         fclose( buf );
     }
@@ -745,6 +751,16 @@ void processPreformatted( const char* line, FILE* in, Patterns* p )
     fflush( out );
 }
 ```
+
+#### Function: extractPattern
+
+The 'extractPattern' function is used to extract the pattern characters from the line without --
+in the case of MaxText --
+the tilde open character;
+or --
+in the case of Markdown --
+the triple single quotation mark.
+This function handles the different conventions used to terminate such a delimiter.
 
 ```main.c
 char* extractPattern( const char* line )
@@ -787,6 +803,8 @@ char* extractPattern( const char* line )
 }
 ```
 
+#### Function: canonicalisePath
+
 ```main.c
 char* canonicaliseSPGenURL( const char* url )
 {
@@ -819,6 +837,9 @@ char* canonicaliseSPGenURL( const char* url )
 The following functions are general purpose, and can be used by any program.
 
 #### Function: readline
+
+The 'readline' function is a portable implementation of the common readline function.
+This implementation uses 'fread' to read one character at a time from the stream.
 
 ```main.c
 char* readline( FILE* stream )
@@ -874,6 +895,12 @@ char* readline( FILE* stream )
 }
 ```
 
+#### Function: readline2
+
+The 'readline2' function is a portable implementation of the common readline function.
+This implementation uses 'fgetc' to read one character at a time from the stream.
+I created this implementation because I was having blocking issues that I thought were associated
+with the existing version.
 
 ```main.c
 char* readline2( FILE* stream )
@@ -927,6 +954,8 @@ char* readline2( FILE* stream )
 
 #### Function: setNonBlocking
 
+The function 'setNonBlocking' sets a file as being non-blocking.
+
 ```main.c
 void setNonBlocking( int fd )
 {
@@ -947,6 +976,10 @@ void setNonBlocking( int fd )
 ```
 
 #### Function: stringAppend
+
+The function 'stringAppend' concatenates two strings together with an optional separator.
+It could probably be made more efficient by using 'realloc' instead of 'calloc',
+but I always seem to have problems with 'realloc'.
 
 ```main.c
 char* stringAppend( char* orig, char sep, const char* suffix )
@@ -977,7 +1010,9 @@ char* stringAppend( char* orig, char sep, const char* suffix )
 }
 ```
 
-#### Function: stringCopy
+#### Function: stringCat
+
+The function 'stringCat' concatenates two strings.
 
 ```main.c
 char* stringCat( const char* a, const char* b )
@@ -995,6 +1030,8 @@ char* stringCat( const char* a, const char* b )
 
 #### Function: stringCopy
 
+The function 'stringCopy' creates an exact duplicate of a string.
+
 ```main.c
 char* stringCopy( const char* src )
 {
@@ -1009,6 +1046,9 @@ char* stringCopy( const char* src )
 
 #### Function: stringEquals
 
+The function 'stringEquals' returns TRUE if the content of the two strings is the same;
+otherwise FALSE;
+
 ```main.c
 int stringEquals( const char* one, const char* two )
 {
@@ -1020,6 +1060,9 @@ int stringEquals( const char* one, const char* two )
 ```
 
 #### Function: stringHasPrefix
+
+The function 'stringHasPrefix' returns TRUE if the passed string has the prefix 'prefix';
+otherwise FALSE.
 
 ```main.c
 int stringHasPrefix( const char* string, const char* prefix )
