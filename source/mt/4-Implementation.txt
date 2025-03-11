@@ -75,6 +75,10 @@ In the future,
 once 'spgen' as implemented as a command line executable,
 this dependency will be removed and extract will instead be called locally.
 
+~main.c~
+#include <errno.h>
+~
+
 .. Defined types and values
 
 The 'int' type is typecast to a 'bool' for readability.
@@ -648,12 +652,10 @@ void processPreformatted( const char* line, FILE* in, Patterns* p )
     {
         if ( stringEquals( "spgen", pattern ) )
         {
-            FILE* file = popen( "sqlgen", "w" );
-
-            if ( file )
+            if ( 1 )
             {
+                FILE* file = popen( "sqlgen", "w" );
                 fprintf( file, "%s", bp );
-
                 pclose( file );
             }
             else

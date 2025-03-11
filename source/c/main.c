@@ -12,6 +12,8 @@
 
 #include <curl/curl.h>
 
+#include <errno.h>
+
 typedef int bool;
 
 typedef struct _Patterns Patterns;
@@ -334,12 +336,10 @@ void processPreformatted( const char* line, FILE* in, Patterns* p )
     {
         if ( stringEquals( "spgen", pattern ) )
         {
-            FILE* file = popen( "sqlgen", "w" );
-
-            if ( file )
+            if ( 1 )
             {
+                FILE* file = popen( "sqlgen", "w" );
                 fprintf( file, "%s", bp );
-
                 pclose( file );
             }
             else
