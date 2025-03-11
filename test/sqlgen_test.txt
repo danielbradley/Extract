@@ -1,0 +1,14 @@
+table base_auth_provisional
+{
+    @AUTH_ID:            Int*
+    @PROVISIONAL_ID:     Int^
+    @provisional_sid:    Text
+
+    %Filter   = PROVISIONAL_ID;@provisional_sid
+    %Module   = baseschema
+    %Output   = mysql
+    %OrderBy  = PROVISIONAL_ID
+    %Prefix   = provisional_
+    %Security = INVOKER
+}
+
