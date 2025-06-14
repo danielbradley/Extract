@@ -1,8 +1,9 @@
 arch    := $(shell uname)
 cpu     := $(shell uname -m)
-quasi   := libexec/quasi/bin/$(arch)/quasi
+quasi   := libexec/quasi/_bin/$(arch)/quasi
 curl    := curl-7.80.0
 base    := $(shell pwd)
+bin     := _bin
 
 ifeq ($(arch),Darwin)
 	FRAMEWORKS=-framework CoreFoundation -framework SystemConfiguration -Wdeprecated-declarations
@@ -22,9 +23,9 @@ $(quasi):
 	make -C libexec/quasi
 
 cc: quasi
-	mkdir  -p bin/$(arch)-$(cpu)
-	gcc $(FRAMEWORKS)    source/c/main.c -o bin/$(arch)-$(cpu)/extract
-	gcc $(FRAMEWORKS) -g source/c/main.c -o bin/$(arch)-$(cpu)/extract-debug
+	mkdir  -p $(bin)/$(arch)-$(cpu)
+	gcc $(FRAMEWORKS)    source/c/main.c -o $(bin)/$(arch)-$(cpu)/extract
+	gcc $(FRAMEWORKS) -g source/c/main.c -o $(bin)/$(arch)-$(cpu)/extract-debug
 
 md:
 	cat source/mt/*.txt | sed 's|^\.\.\.|####|g' \
@@ -48,5 +49,5 @@ maxtext:
 
 clean:
 	make -C libexec/quasi clean
-	rm -rf bin tmp
+	rm -rf $(bin)
 

@@ -2,5 +2,4 @@ GIT
 ._*
 .DS_Store
 *~
-bin
-tmp
+_bin
