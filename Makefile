@@ -3,7 +3,6 @@ cpu     := $(shell uname -m)
 quasi   := libexec/quasi/bin/$(arch)/quasi
 curl    := curl-7.80.0
 base    := $(shell pwd)
-curldir := tmp
 
 ifeq ($(arch),Darwin)
 	FRAMEWORKS=-framework CoreFoundation -framework SystemConfiguration -Wdeprecated-declarations
@@ -22,26 +21,10 @@ quasi: $(quasi)
 $(quasi):
 	make -C libexec/quasi
 
-curl: $(curldir)/$(curl).tar.bz2 $(curldir)/$(curl) $(curldir)/$(curl)/config.status $(curldir)/$(curl)/lib/.libs/libcurl.a
-
-$(curldir)/$(curl).tar.bz2:
-	mkdir -p $(curldir)
-	curl https://curl.se/download/$(curl).tar.bz2 --output $(curldir)/$(curl).tar.bz2
-
-$(curldir)/$(curl):
-	mkdir -p $(curldir)
-	cd $(curldir); tar jxvf $(curl).tar.bz2
-
-$(curldir)/$(curl)/config.status:
-	cd $(curldir)/$(curl); ./configure --disable-shared --enable-static --without-ldap --without-brotli --with-nss
-
-$(curldir)/$(curl)/lib/.libs/libcurl.a:
-	-cd $(curldir)/$(curl); make
-
-cc: quasi curl
+cc: quasi
 	mkdir  -p bin/$(arch)-$(cpu)
-	gcc $(FRAMEWORKS) -pthread    source/c/main.c $(curldir)/$(curl)/lib/.libs/libcurl.a $(LDLIBS) -I$(curldir)/$(curl)/include -o bin/$(arch)-$(cpu)/extract
-	gcc $(FRAMEWORKS) -pthread -g source/c/main.c $(curldir)/$(curl)/lib/.libs/libcurl.a $(LDLIBS) -I$(curldir)/$(curl)/include -o bin/$(arch)-$(cpu)/extract-debug
+	gcc $(FRAMEWORKS)    source/c/main.c -o bin/$(arch)-$(cpu)/extract
+	gcc $(FRAMEWORKS) -g source/c/main.c -o bin/$(arch)-$(cpu)/extract-debug
 
 md:
 	cat source/mt/*.txt | sed 's|^\.\.\.|####|g' \

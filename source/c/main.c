@@ -10,8 +10,6 @@
 
 #include <string.h>
 
-#include <curl/curl.h>
-
 #include <errno.h>
 
 typedef int bool;
@@ -68,8 +66,6 @@ Patterns* Patterns_free( Patterns* self );
 
 int main( int argc, char** argv )
 {
-    curl_global_init( CURL_GLOBAL_ALL );
-
     DEV_NULL  = fopen( "/dev/null", "a" );
     STRIP     = argumentsContains( argc, argv, "-s" ) ? 1 : 0;
     char* pat = argumentsGetValue( argc, argv, "-p" );
@@ -119,8 +115,6 @@ int main( int argc, char** argv )
         Patterns_free( p );
     }
     free( pat );
-
-    curl_global_cleanup();
 
     return 0;
 }
@@ -336,34 +330,9 @@ void processPreformatted( const char* line, FILE* in, Patterns* p )
     {
         if ( stringEquals( "spgen", pattern ) )
         {
-            if ( 1 )
-            {
-                FILE* file = popen( "sqlgen", "w" );
-                fprintf( file, "%s", bp );
-                pclose( file );
-            }
-            else
-            {
-                char* host     = "http://sqlgen.azurewebsites.net/api/sqlgenerate/";
-                char* field    = "table_info=";
-                char* data     = canonicaliseSPGenURL( bp );
-
-                void* handle   = curl_easy_init();
-                char* encoded  = curl_easy_escape( handle, data, 0 );
-                char* postdata = calloc( strlen( field ) + strlen( encoded ) + 1, sizeof(char) );
-                {
-                    sprintf( postdata, "%s%s", field, encoded );
-
-                    curl_easy_setopt ( handle, CURLOPT_URL,        host     );
-                    curl_easy_setopt ( handle, CURLOPT_POST,       1L       );
-                    curl_easy_setopt ( handle, CURLOPT_POSTFIELDS, postdata );
-                    curl_easy_setopt ( handle, CURLOPT_WRITEDATA,  out      ); // <------ Writing to 'out'
-                    curl_easy_perform( handle );
-                    curl_easy_cleanup( handle );
-                }
-                free( postdata );
-                curl_free( encoded );
-            }
+            FILE* file = popen( "sqlgen", "w" );
+            fprintf( file, "%s", bp );
+            pclose( file );
         }
         fclose( buf );
     }

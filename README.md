@@ -121,25 +121,8 @@ This header is included to provide access to the 'strdup', 'strcmp', 'strncmp', 
 'strlen' is used to find the length of a string, and
 'stpcpy' is used to concatenate a prefix, pattern, and suffix to create the appropriate line delimiter for either Markdown or MaxText.
 
-
-```main.c
-#include <curl/curl.h>
-```
-
-This header is included to provide access to the 'curl' related functions
-'curl_global_init',
-'curl_global_cleanup',
-'curl_easy_init',
-'curl_easy_escape',
-'curl_easy_setopt',
-'curl_easy_perform',
-'curl_easy_cleanup', and
-'curl_free';
-which are used to call the 'spgen' webservice in order to translate any 'spgen' specifications into SQL statements.
-
-In the future,
-once 'spgen' as implemented as a command line executable,
-this dependency will be removed and extract will instead be called locally.
+'curl' used to be included in order to translate '~spgen~' patterns into SQL statements.
+Now 'extract' will search the path for a tool called 'sqlgenerate'.
 
 ```main.c
 #include <errno.h>
@@ -371,8 +354,6 @@ along with the Patterns object.
 ```main.c
 int main( int argc, char** argv )
 {
-    curl_global_init( CURL_GLOBAL_ALL );
-
     DEV_NULL  = fopen( "/dev/null", "a" );
     STRIP     = argumentsContains( argc, argv, "-s" ) ? 1 : 0;
     char* pat = argumentsGetValue( argc, argv, "-p" );
@@ -422,8 +403,6 @@ int main( int argc, char** argv )
         Patterns_free( p );
     }
     free( pat );
-
-    curl_global_cleanup();
 
     return 0;
 }
@@ -718,34 +697,9 @@ void processPreformatted( const char* line, FILE* in, Patterns* p )
     {
         if ( stringEquals( "spgen", pattern ) )
         {
-            if ( 1 )
-            {
-                FILE* file = popen( "sqlgen", "w" );
-                fprintf( file, "%s", bp );
-                pclose( file );
-            }
-            else
-            {
-                char* host     = "http://sqlgen.azurewebsites.net/api/sqlgenerate/";
-                char* field    = "table_info=";
-                char* data     = canonicaliseSPGenURL( bp );
-
-                void* handle   = curl_easy_init();
-                char* encoded  = curl_easy_escape( handle, data, 0 );
-                char* postdata = calloc( strlen( field ) + strlen( encoded ) + 1, sizeof(char) );
-                {
-                    sprintf( postdata, "%s%s", field, encoded );
-
-                    curl_easy_setopt ( handle, CURLOPT_URL,        host     );
-                    curl_easy_setopt ( handle, CURLOPT_POST,       1L       );
-                    curl_easy_setopt ( handle, CURLOPT_POSTFIELDS, postdata );
-                    curl_easy_setopt ( handle, CURLOPT_WRITEDATA,  out      ); // <------ Writing to 'out'
-                    curl_easy_perform( handle );
-                    curl_easy_cleanup( handle );
-                }
-                free( postdata );
-                curl_free( encoded );
-            }
+            FILE* file = popen( "sqlgen", "w" );
+            fprintf( file, "%s", bp );
+            pclose( file );
         }
         fclose( buf );
     }
